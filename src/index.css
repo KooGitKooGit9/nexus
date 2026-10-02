@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ───────────── Design tokens (RGB channels for Tailwind alpha) ───────────── */
+:root {
+  --bg: 246 247 251;
+  --surface: 255 255 255;
+  --surface-2: 241 243 249;
+  --surface-3: 230 233 243;
+  --line: 15 23 42;
+  --fg: 15 18 34;
+  --muted: 88 96 122;
+  --subtle: 140 148 172;
+  --accent: 124 58 237;
+  --accent-2: 6 182 212;
+  --accent-3: 236 72 153;
+  --success: 16 185 129;
+  --warning: 245 158 11;
+  --danger: 239 68 68;
+  --info: 59 130 246;
+  --aurora-opacity: 0.35;
+  color-scheme: light;
+}
+
+.dark {
+  --bg: 7 8 16;
+  --surface: 17 19 33;
+  --surface-2: 24 27 45;
+  --surface-3: 34 38 60;
+  --line: 255 255 255;
+  --fg: 236 238 248;
+  --muted: 152 158 186;
+  --subtle: 104 110 140;
+  --accent: 139 92 246;
+  --accent-2: 34 211 238;
+  --accent-3: 244 114 182;
+  --aurora-opacity: 0.55;
+  color-scheme: dark;
+}
+
+/* Accent presets */
+[data-accent='ocean'] { --accent: 59 130 246; --accent-2: 34 211 238; --accent-3: 129 140 248; }
+[data-accent='emerald'] { --accent: 16 185 129; --accent-2: 132 204 22; --accent-3: 45 212 191; }
+[data-accent='sunset'] { --accent: 249 115 22; --accent-2: 236 72 153; --accent-3: 250 204 21; }
+[data-accent='rose'] { --accent: 244 63 94; --accent-2: 168 85 247; --accent-3: 251 146 60; }
+
+@layer base {
+  html, body, #root { height: 100%; }
+  /* the app shell scrolls inside <Page>/feature panes; the document itself never scrolls (no sideways jiggle) */
+  html, body { overflow: hidden; overscroll-behavior: none; }
+  #root { width: 100%; }
+  body {
+    @apply bg-bg text-fg font-sans antialiased;
+    font-feature-settings: 'ss01', 'ss02', 'cv11';
+    letter-spacing: -0.005em;
+  }
+  ::selection { background: rgb(var(--accent) / 0.35); }
+  * { scrollbar-width: thin; scrollbar-color: rgb(var(--line) / 0.15) transparent; }
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-thumb { background: rgb(var(--line) / 0.12); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+  *::-webkit-scrollbar-thumb:hover { background: rgb(var(--line) / 0.25); background-clip: padding-box; border: 2px solid transparent; }
+  *::-webkit-scrollbar-track { background: transparent; }
+}
+
+@layer components {
+  /* Frosted glass surface — the base card style across the app */
+  .glass {
+    background: rgb(var(--surface) / 0.62);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgb(var(--line) / 0.08);
+    box-shadow: 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 10px 30px -15px rgb(0 0 0 / 0.45);
+  }
+  .glass-strong {
+    background: rgb(var(--surface) / 0.86);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgb(var(--line) / 0.1);
+  }
+  /* Animated gradient border (wrap content inside) */
+  .gradient-border {
+    position: relative;
+    border: 1px solid transparent;
+    background:
+      linear-gradient(rgb(var(--surface)), rgb(var(--surface))) padding-box,
+      linear-gradient(135deg, rgb(var(--accent) / .8), rgb(var(--accent-2) / .6), rgb(var(--accent-3) / .8)) border-box;
+  }
+  .gradient-text {
+    background: linear-gradient(120deg, rgb(var(--accent)), rgb(var(--accent-2)) 55%, rgb(var(--accent-3)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .card-hover { @apply transition-all duration-300; }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    border-color: rgb(var(--accent) / 0.35);
+    box-shadow: 0 0 0 1px rgb(var(--accent) / 0.15), 0 18px 40px -18px rgb(var(--accent) / 0.55);
+  }
+  .shimmer {
+    background: linear-gradient(90deg, rgb(var(--line) / .04) 25%, rgb(var(--line) / .1) 37%, rgb(var(--line) / .04) 63%);
+    background-size: 200% 100%;
+    @apply animate-shimmer;
+  }
+  .noise::after {
+    content: '';
+    position: absolute; inset: 0;
+    pointer-events: none;
+    opacity: .035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .grid-bg {
+    background-image:
+      linear-gradient(rgb(var(--line) / 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--line) / 0.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .dot-bg {
+    background-image: radial-gradient(rgb(var(--line) / 0.12) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .focus-ring { @apply outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg; }
+  .input-base {
+    @apply w-full rounded-xl bg-surface-2/70 border border-line/10 px-3 py-2 text-sm text-fg placeholder:text-subtle
+      outline-none transition focus:border-accent/60 focus:ring-4 focus:ring-accent/15;
+  }
+  .scrollbar-none { scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+}
+
+/* Markdown-ish rendered content (docs, messages) */
+.prose-nexus { @apply text-[15px] leading-7 text-fg/90; }
+.prose-nexus h1 { @apply text-3xl font-bold mt-6 mb-3 text-fg tracking-tight; }
+.prose-nexus h2 { @apply text-2xl font-semibold mt-6 mb-2 text-fg tracking-tight; }
+.prose-nexus h3 { @apply text-lg font-semibold mt-4 mb-1 text-fg; }
+.prose-nexus p { @apply my-2; }
+.prose-nexus ul { @apply list-disc pl-6 my-2; }
+.prose-nexus ol { @apply list-decimal pl-6 my-2; }
+.prose-nexus code { @apply font-mono text-[0.85em] px-1.5 py-0.5 rounded-md bg-surface-3/70 text-accent-3; }
+.prose-nexus pre { @apply font-mono text-sm p-4 rounded-xl bg-surface-3/60 border border-line/10 overflow-x-auto my-3; }
+.prose-nexus pre code { @apply bg-transparent p-0 text-fg/90; }
+.prose-nexus blockquote { @apply border-l-4 border-accent/60 pl-4 italic text-muted my-3; }
+.prose-nexus a { @apply text-accent underline-offset-2 hover:underline; }
+.prose-nexus hr { @apply border-line/10 my-6; }
+.prose-nexus table { @apply w-full text-sm my-3 border-collapse; }
+.prose-nexus th, .prose-nexus td { @apply border border-line/10 px-3 py-1.5 text-left; }
+.prose-nexus th { @apply bg-surface-2 font-semibold; }
+
+/* React Flow theming */
+.react-flow__attribution { display: none; }

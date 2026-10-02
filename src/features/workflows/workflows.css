@@ -1,0 +1,117 @@
+/* Workflows feature — React Flow theming + run animations (scoped to .nexus-flow) */
+
+.nexus-flow {
+  --xy-background-color: transparent;
+  --xy-node-border-radius: 18px;
+  --xy-edge-stroke: rgb(var(--line) / 0.25);
+  --xy-edge-stroke-selected: rgb(var(--accent));
+  --xy-connectionline-stroke: rgb(var(--accent));
+  --xy-handle-background-color: rgb(var(--surface));
+  --xy-handle-border-color: rgb(var(--accent));
+  --xy-selection-background-color: rgb(var(--accent) / 0.08);
+  --xy-selection-border: 1px dashed rgb(var(--accent) / 0.6);
+  --xy-minimap-background-color: rgb(var(--surface) / 0.75);
+  --xy-minimap-mask-background-color: rgb(var(--bg) / 0.55);
+  --xy-minimap-mask-stroke-color: rgb(var(--accent) / 0.6);
+  --xy-minimap-mask-stroke-width: 2;
+  --xy-controls-button-background-color: rgb(var(--surface) / 0.8);
+  --xy-controls-button-background-color-hover: rgb(var(--surface-3));
+  --xy-controls-button-color: rgb(var(--fg));
+  --xy-controls-button-color-hover: rgb(var(--fg));
+  --xy-controls-button-border-color: rgb(var(--line) / 0.08);
+  --xy-controls-box-shadow: none;
+  --xy-background-pattern-dots-color: rgb(var(--line) / 0.2);
+  --xy-minimap-node-stroke-color: transparent;
+}
+
+.nexus-flow .react-flow__node {
+  border-radius: 18px;
+}
+.nexus-flow .react-flow__node:focus-visible { outline: none; }
+
+.nexus-flow .react-flow__controls {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgb(var(--line) / 0.1);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 10px 30px -15px rgb(0 0 0 / 0.5);
+}
+.nexus-flow .react-flow__controls-button { width: 30px; height: 30px; }
+.nexus-flow .react-flow__controls-button svg { fill: currentColor; max-width: 12px; max-height: 12px; }
+
+.nexus-flow .react-flow__minimap {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgb(var(--line) / 0.1);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 10px 30px -15px rgb(0 0 0 / 0.5);
+}
+
+.nexus-flow .react-flow__handle {
+  width: 12px;
+  height: 12px;
+  border-width: 2px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.nexus-flow .react-flow__handle:hover,
+.nexus-flow .react-flow__handle.connectingfrom {
+  transform: scale(1.35);
+  box-shadow: 0 0 0 4px rgb(var(--accent) / 0.2);
+}
+.nexus-flow .react-flow__handle-top { top: -6px; }
+.nexus-flow .react-flow__handle-bottom { bottom: -6px; }
+
+/* Edges */
+@keyframes wf-dash {
+  to { stroke-dashoffset: -24; }
+}
+.wf-edge-flow {
+  stroke-dasharray: 6 6;
+  animation: wf-dash 0.9s linear infinite;
+}
+.wf-edge-fast {
+  stroke-dasharray: 8 6;
+  animation: wf-dash 0.35s linear infinite;
+}
+
+/* Node glow while running */
+@keyframes wf-glow {
+  0%, 100% { box-shadow: 0 0 0 1px var(--wf-c), 0 0 24px -2px var(--wf-c); }
+  50% { box-shadow: 0 0 0 2px var(--wf-c), 0 0 44px 4px var(--wf-c); }
+}
+.wf-node-running {
+  animation: wf-glow 0.9s ease-in-out infinite;
+}
+
+@keyframes wf-spin-border {
+  to { --wf-angle: 360deg; }
+}
+@property --wf-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+/* Gradient border for trigger nodes */
+.wf-trigger-border {
+  background:
+    linear-gradient(rgb(var(--surface) / 0.92), rgb(var(--surface) / 0.92)) padding-box,
+    conic-gradient(from var(--wf-angle), rgb(var(--accent)), rgb(var(--accent-2)), rgb(var(--accent-3)), rgb(var(--accent))) border-box;
+  border: 1.5px solid transparent;
+  animation: wf-spin-border 6s linear infinite;
+}
+
+/* Count-up hero number shimmer */
+@keyframes wf-console-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.wf-log-line { animation: wf-console-in 0.25s ease-out both; }
+
+/* React Flow attribution — kept (MIT courtesy) but subtle & themed */
+.nexus-flow .react-flow__attribution {
+  background: transparent;
+  padding: 2px 6px;
+  font-size: 9px;
+  opacity: 0.45;
+}
+.nexus-flow .react-flow__attribution a { color: rgb(var(--subtle)); }
