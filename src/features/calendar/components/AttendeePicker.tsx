@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { useCore } from '@/store/core'
 import type { CalEvent } from '../types'
 import { userConflict } from '../utils'
+import { isHuman } from '@/features/people/format'
 
 interface Props {
   value: string[]
@@ -27,7 +28,7 @@ export function AttendeePicker({ value, onChange, organizerId, events, range, ex
   const options = useMemo(() => {
     const t = q.trim().toLowerCase()
     return users
-      .filter((u) => !value.includes(u.id))
+      .filter((u) => isHuman(u) && !value.includes(u.id))
       .filter((u) => !t || u.name.toLowerCase().includes(t) || u.nameEn.toLowerCase().includes(t) || u.title.toLowerCase().includes(t) || u.department.includes(t))
       .slice(0, 8)
   }, [users, value, q])
@@ -52,7 +53,7 @@ export function AttendeePicker({ value, onChange, organizerId, events, range, ex
                 className={cn('flex items-center gap-1.5 rounded-full border py-0.5 pl-0.5 pr-2 text-[12px]', conflict ? 'border-amber-400/40 bg-amber-400/10' : 'border-line/10 bg-line/[0.05]')}
               >
                 <Avatar userId={id} size="xs" />
-                <span className="text-fg">{u?.name}</span>
+                <span className="text-fg">{u?.name ?? '나간 멤버'}</span>
                 <span className={cn('h-1.5 w-1.5 rounded-full', conflict ? 'bg-amber-400' : 'bg-emerald-400')} />
                 {id === organizerId ? (
                   <span className="text-[10px] text-subtle">주최</span>

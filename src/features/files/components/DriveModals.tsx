@@ -9,6 +9,7 @@ import { useDriveUI } from '../uiStore'
 import { FOLDER_COLORS } from '../fileTypes'
 import { copyFileLink } from '../hooks'
 import type { FileItem } from '../types'
+import { isHuman, joinMeta } from '@/features/people/format'
 
 export function NewFolderModal({ parentId }: { parentId: string | null }) {
   const open = useDriveUI((s) => s.newFolderOpen)
@@ -145,7 +146,7 @@ export function ShareModal() {
 
   useEffect(() => { if (item) { setSel(item.sharedWith ?? []); setQ('') } }, [item?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const list = users.filter((u) => u.id !== item?.ownerId && (!q.trim() || u.name.includes(q.trim()) || u.department.includes(q.trim()) || u.nameEn.toLowerCase().includes(q.trim().toLowerCase())))
+  const list = users.filter((u) => isHuman(u) && u.id !== item?.ownerId && (!q.trim() || u.name.includes(q.trim()) || u.department.includes(q.trim()) || u.nameEn.toLowerCase().includes(q.trim().toLowerCase())))
   const save = () => {
     if (!item) return
     useFiles.getState().shareItem(item.id, sel)
@@ -203,7 +204,7 @@ export function ShareModal() {
               <Avatar userId={u.id} size="sm" showPresence />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[13px] font-medium">{u.name}{u.id === me && <span className="text-subtle"> (나)</span>}</div>
-                <div className="truncate text-[11px] text-subtle">{u.department} · {u.title}</div>
+                <div className="truncate text-[11px] text-subtle">{joinMeta(u.department, u.title) || u.email}</div>
               </div>
               <Checkbox checked={on} onChange={toggle} />
             </div>

@@ -8,7 +8,10 @@ export interface FileItem {
   ownerId: string
   createdAt: string
   updatedAt: string
+  /** legacy (demo seed): starred by the demo user — superseded by `starredBy` */
   starred?: boolean
+  /** members who starred this item (stars are personal) */
+  starredBy?: string[]
   sharedWith?: string[]
   url?: string // object URL for uploaded files
   trashed?: boolean

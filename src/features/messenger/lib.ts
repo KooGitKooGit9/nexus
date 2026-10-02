@@ -20,11 +20,11 @@ export function channelTitle(c: Channel, me = getCurrentUserId()): string {
   if (c.kind === 'dm') {
     const other = otherMembers(c, me)[0]
     const u = getUser(other)
-    return other === me ? `${u?.name ?? ''} (나)` : u?.name ?? '알 수 없음'
+    return other === me ? `${u?.name ?? ''} (나)` : u?.name ?? '나간 멤버'
   }
   if (c.kind === 'group') {
     if (c.name) return c.name
-    return otherMembers(c, me).map((id) => getUser(id)?.name ?? '').join(', ')
+    return otherMembers(c, me).map((id) => getUser(id)?.name ?? '나간 멤버').join(', ')
   }
   return c.name
 }

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist, type PersistStorage, type StorageValue } from 'zustand/middleware'
 import { STORAGE_PREFIX } from '@/lib/persist'
-import { getSessionUserId } from '@/lib/session'
+import { getSessionUserId, getSessionScope } from '@/lib/session'
 import { useSyncStatus } from '@/lib/sync'
 import { uid } from '@/lib/utils'
 import { getCurrentUserId, toast } from '@/store/core'
@@ -52,6 +52,8 @@ export interface ChatMessage {
   cards?: ResultCard[]
   confirm?: ConfirmState
   error?: string
+  /** machine-readable error kind (e.g. 'PLAN_LIMIT' → the panel offers an upgrade button) */
+  errorCode?: string
 }
 
 export interface Conversation {
@@ -168,8 +170,11 @@ if (typeof window !== 'undefined') {
   window.addEventListener('pagehide', flush)
   window.addEventListener('beforeunload', flush)
 }
+// AI chats are private to the member *and* the workspace (never leak across workspaces on one browser)
+const scoped = (k: string) => { const scope = getSessionScope(); return scope ? `${k}@${scope}` : k }
 const storage: PersistStorage<AIChatState> = {
-  getItem: (k) => {
+  getItem: (key) => {
+    const k = scoped(key)
     const p = pendingWrites.get(k)
     if (p) return p
     try {
@@ -179,11 +184,12 @@ const storage: PersistStorage<AIChatState> = {
       return null
     }
   },
-  setItem: (k, v) => {
-    pendingWrites.set(k, v)
+  setItem: (key, v) => {
+    pendingWrites.set(scoped(key), v)
     if (!flushTimer) flushTimer = setTimeout(flush, 700)
   },
-  removeItem: (k) => {
+  removeItem: (key) => {
+    const k = scoped(key)
     pendingWrites.delete(k)
     try { localStorage.removeItem(k) } catch { /* ignore */ }
   },
@@ -283,7 +289,7 @@ export const useAIChat = create<AIChatState>()(persist((set, get) => {
     const ctrl = new AbortController()
     controller = ctrl
     set({ busy: true })
-    patchMsg(convId, id, { engine: 'gemini', status: 'thinking', content: '', tools: [], cards: [], confirm: undefined, error: undefined, steps: undefined, action: undefined })
+    patchMsg(convId, id, { engine: 'gemini', status: 'thinking', content: '', tools: [], cards: [], confirm: undefined, error: undefined, errorCode: undefined, steps: undefined, action: undefined })
 
     const conv = get().conversations.find((c) => c.id === convId)
     if (!conv) return set({ busy: false })
@@ -328,10 +334,12 @@ export const useAIChat = create<AIChatState>()(persist((set, get) => {
         runLocal(convId, id, prompt, 0)
         return
       }
-      console.warn('[Nexus AI]', err)
+      // plan quota reached is an expected state (shown with an upgrade button), not a bug
+      if (!(err instanceof GeminiError && err.code === 'PLAN_LIMIT')) console.warn('[Nexus AI]', err)
       patchMsg(convId, id, (m) => ({
         status: 'error',
         error: errorMessage(err),
+        errorCode: err instanceof GeminiError ? err.code : undefined,
         tools: (m.tools ?? []).map((t) => (t.status === 'running' ? { ...t, status: 'cancelled' as const } : t)),
       }))
       set({ busy: false })

@@ -48,12 +48,26 @@ export const useWhiteboard = create<WhiteboardState>()(
       if (!src) return undefined
       const nid = uid('wb')
       const now = new Date().toISOString()
-      const copy: Board = { ...src, id: nid, name: `${src.name} (사본)`, ownerId: getCurrentUserId(), createdAt: now, updatedAt: now, starred: false, elements: cloneElements(src.elements) }
+      const copy: Board = { ...src, id: nid, name: `${src.name} (사본)`, ownerId: getCurrentUserId(), createdAt: now, updatedAt: now, starred: undefined, starredBy: [], elements: cloneElements(src.elements) }
       set((s) => ({ boards: [copy, ...s.boards] }))
       return nid
     },
     deleteBoard: (id) => set((s) => ({ boards: s.boards.filter((b) => b.id !== id) })),
-    toggleStar: (id) => set((s) => ({ boards: s.boards.map((b) => (b.id === id ? { ...b, starred: !b.starred } : b)) })),
+    toggleStar: (id) => {
+      const me = getCurrentUserId()
+      set((s) => ({
+        boards: s.boards.map((b) => {
+          if (b.id !== id) return b
+          const base = b.starredBy ?? (b.starred ? [me] : [])
+          return { ...b, starredBy: base.includes(me) ? base.filter((x) => x !== me) : [...base, me], starred: undefined }
+        }),
+      }))
+    },
   })),
 )
 syncAcrossTabs(useWhiteboard)
+
+/** Stars are personal: did `me` star this board? (demo seed boards carry a legacy `starred` flag) */
+export function isBoardStarred(b: { starred?: boolean; starredBy?: string[] }, me: string = getCurrentUserId()): boolean {
+  return b.starredBy ? b.starredBy.includes(me) : !!b.starred
+}

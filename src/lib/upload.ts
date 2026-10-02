@@ -1,5 +1,4 @@
 import { isServerMode } from './sync'
-import { getSessionUserId } from './session'
 
 export interface UploadedFile {
   /** server file id (absent in offline mode) */
@@ -25,11 +24,15 @@ export async function uploadFile(file: File, onProgress?: (pct: number) => void)
     xhr.open('POST', '/api/upload')
     xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
     xhr.setRequestHeader('X-File-Name', encodeURIComponent(file.name))
-    xhr.setRequestHeader('X-User', getSessionUserId() ?? '')
     xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress?.(Math.round((e.loaded / e.total) * 100)) }
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText))
-      else reject(new Error(`업로드 실패 (${xhr.status})`))
+      else {
+        // e.g. 402 PLAN_LIMIT (storage) — surface the server's Korean message
+        let message = `업로드 실패 (${xhr.status})`
+        try { message = (JSON.parse(xhr.responseText) as { message?: string }).message || message } catch { /* not JSON */ }
+        reject(Object.assign(new Error(message), { status: xhr.status }))
+      }
     }
     xhr.onerror = () => reject(new Error('업로드 중 네트워크 오류'))
     xhr.send(file)

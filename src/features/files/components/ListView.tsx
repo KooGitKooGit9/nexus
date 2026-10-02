@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { cn, formatBytes, formatDate, timeAgo } from '@/lib/utils'
 import { Avatar, Menu } from '@/components/ui'
 import { useCore } from '@/store/core'
-import { useFiles } from '../store'
+import { isFileStarred, useFiles } from '../store'
 import { KIND_META, kindOf } from '../fileTypes'
 import type { FileItem, SortKey } from '../types'
 import { FileIcon } from './FileGlyph'
@@ -72,7 +72,7 @@ export function ListView({ items, selected, renamingId, counts, h, showLocation 
                   ) : (
                     <div className="flex items-center gap-1.5">
                       <span className="truncate font-medium">{item.name}</span>
-                      {item.starred && <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />}
+                      {isFileStarred(item) && <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />}
                       {!!item.sharedWith?.length && <Users className="h-3 w-3 shrink-0 text-subtle" />}
                     </div>
                   )}

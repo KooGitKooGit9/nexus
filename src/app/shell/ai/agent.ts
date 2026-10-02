@@ -5,12 +5,13 @@
 import { addDays, differenceInCalendarDays, endOfDay, format, isSameDay, startOfDay } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { useCore, getUser } from '@/store/core'
+import { isDemoWorkspace } from '@/lib/workspace'
 import { useCalendar } from '@/features/calendar/store'
 import { useProjects } from '@/features/projects/store'
 import { useMessenger } from '@/features/messenger/store'
 import { useApprovals } from '@/features/approvals/store'
 import { useGoals } from '@/features/goals/store'
-import { useDocs } from '@/features/docs/store'
+import { isDocStarred, useDocs } from '@/features/docs/store'
 import { krProgress, objectiveProgress } from '@/features/goals/lib'
 import type { CalEvent } from '@/features/calendar/types'
 import type { Task, Priority, TaskStatus } from '@/features/projects/types'
@@ -26,6 +27,7 @@ import { docQuery, rankDocs, summarizeMarkdown, type DocHit } from './docsum'
 import { docTemplate, type AgentAction } from './actions'
 import { josa } from './nlp'
 import type { Doc } from '@/features/docs/types'
+import { joinMeta } from '@/features/people/format'
 
 export interface AgentAnswer {
   steps: string[]
@@ -437,7 +439,7 @@ function docsAnswer(): AgentAnswer {
   if (!docs.length) return { steps, text: '아직 문서가 없어요. [새 문서 만들기](/docs?new=1)' }
   const L = ['## 📄 최근 업데이트된 문서', '']
   docs.slice(0, 6).forEach((d) => L.push(`- ${d.emoji} [${d.title}](/docs/${d.id}) — ${nameOf(d.lastEditedBy)} · ${timeAgo(d.updatedAt)}`))
-  const starred = docs.filter((d) => d.starred)
+  const starred = docs.filter((d) => isDocStarred(d))
   if (starred.length) { L.push('', '### ⭐ 즐겨찾기'); starred.slice(0, 5).forEach((d) => L.push(`- ${d.emoji} [${d.title}](/docs/${d.id})`)) }
   const mine = docs.filter((d) => d.authorId === me()).length
   L.push('', `전체 문서 **${docs.length}개** · 내가 작성한 문서 **${mine}개** · [문서 & 위키 열기 →](/docs)`)
@@ -468,7 +470,7 @@ function personAnswer(p: P): AgentAnswer | null {
   const nextMeet = useCalendar.getState().events.filter((e) => e.attendeeIds.includes(u.id) && e.attendeeIds.includes(me()) && +new Date(e.start) > Date.now()).sort((a, b) => +new Date(a.start) - +new Date(b.start))[0]
   const L = [
     `## 👤 ${u.name} (${u.nameEn})`,
-    `**${u.title}** · ${u.department} · ${PRESENCE_LABEL[u.presence]}${u.statusText ? ` — ${u.statusEmoji ?? ''} ${u.statusText}` : ''}`,
+    `${joinMeta(u.title && `**${u.title}**`, u.department, PRESENCE_LABEL[u.presence])}${u.statusText ? ` — ${u.statusEmoji ?? ''} ${u.statusText}` : ''}`,
     '',
     '| 항목 | 정보 |', '|---|---|',
     `| 📧 이메일 | \`${u.email}\` |`,
@@ -676,10 +678,24 @@ function docCreateAnswer(p: P): AgentAnswer {
   }
 }
 
+/** Real workspaces: help examples must not name the demo's people / channels / documents. */
+function neutralExamples(text: string): string {
+  if (isDemoWorkspace()) return text
+  const self = me()
+  const mate = useCore.getState().users.find((u) => u.id !== self && u.id !== 'u_bot')?.name
+  const who = mate ?? '동료'
+  return text
+    .replace(/박서준|최지우|서현우|한소희/g, who)
+    .replace(/#engineering/g, '#general')
+    .replace(/"PRD 핵심만", "온콜 런북 정리"/g, '"회의록 핵심만 정리해줘"')
+    .replace(/검색 성능 개선 태스크/g, '랜딩 페이지 개편 태스크')
+    .replace(/로드맵 회의/g, '주간 회의')
+}
+
 function helpAnswer(): AgentAnswer {
   return {
     steps: ['가능한 기능을 정리하는 중…'],
-    text: [
+    text: neutralExamples([
       '## ✨ Nexus AI가 도와드릴 수 있는 일',
       '워크스페이스의 실제 데이터(일정 · 태스크 · 메신저 · 결재 · OKR · 문서 · 구성원)를 읽고 답하고, **직접 실행**도 해요.',
       '',
@@ -699,7 +715,7 @@ function helpAnswer(): AgentAnswer {
       '- **브리핑** — "오늘 브리핑"',
       '',
       '> 🔒 모든 분석은 브라우저 안에서 로컬로 처리돼요. 실행 전에는 항상 확인을 받아요.',
-    ].join('\n'),
+    ].join('\n')),
   }
 }
 
@@ -732,7 +748,7 @@ function fallbackAnswer(prompt: string): AgentAnswer {
       '- "이번 분기 OKR 진척도"',
       '',
       '또는 [⌘K 커맨드 팔레트](/)에서 직접 검색해 보세요.',
-    ].join('\n'),
+    ].join('\n').replace('#engineering', isDemoWorkspace() ? '#engineering' : '#general'),
   }
 }
 
@@ -784,6 +800,16 @@ export const SUGGESTIONS = [
   { emoji: '💬', text: '#engineering 채널 요약' },
   { emoji: '✉️', text: '현우님께 PRD 리뷰 부탁한다고 DM 보내줘' },
   { emoji: '🗓️', text: '내일 오후 3시 디자인 리뷰 잡아줘' },
+  { emoji: '🖋️', text: '결재 대기 현황' },
+  { emoji: '🎯', text: '이번 분기 OKR 진척도' },
+]
+
+/** Local-agent suggestions for real (non-demo) workspaces — no demo people / channels. */
+export const SUGGESTIONS_STARTER = [
+  { emoji: '📅', text: '오늘 일정 요약' },
+  { emoji: '✅', text: '내 할 일 우선순위 정리' },
+  { emoji: '🗓️', text: '내일 오후 3시 팀 회의 잡아줘' },
+  { emoji: '💬', text: '#general 채널 요약' },
   { emoji: '🖋️', text: '결재 대기 현황' },
   { emoji: '🎯', text: '이번 분기 OKR 진척도' },
 ]

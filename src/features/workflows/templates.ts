@@ -27,7 +27,7 @@ export const TEMPLATES: WorkflowTemplate[] = [
       nodes: [
         gnode('t1', 'form_submitted', 0, 0, { form: 'onboarding' }),
         gnode('a1', 'create_doc', 0, 1, { title: '{{form.name}}님 온보딩 체크리스트', template: 'onboarding', folder: '피플팀 / 온보딩' }),
-        gnode('a2', 'send_message', 0, 2, { channel: 'general', message: '🎉 {{form.name}}님이 오로라랩스에 합류했어요! 따뜻하게 맞아주세요 👋' }),
+        gnode('a2', 'send_message', 0, 2, { channel: 'general', message: '🎉 {{form.name}}님이 우리 팀에 합류했어요! 따뜻하게 맞아주세요 👋' }),
         gnode('a3', 'create_task', 0, 3, { project: 'nexus', title: '{{form.name}}님 노트북 · 계정 세팅', assignee: 'u_devops', priority: 'high' }),
         gnode('d1', 'delay', 0, 4, { amount: 1, unit: 'days' }),
         gnode('a4', 'send_email', 0, 5, { to: '{{form.email}}', subject: '첫 출근을 환영합니다 🌌', body: '{{form.name}}님, 첫날 일정과 버디를 안내드려요.' }),
@@ -48,7 +48,7 @@ export const TEMPLATES: WorkflowTemplate[] = [
         gnode('t1', 'approval_requested', 0, 0, { approvalKind: 'all', event: 'approved' }),
         gnode('c1', 'if_else', 0, 1, { match: 'all', rules: [{ id: 'r1', field: 'approval.amount', op: 'gt', value: '1000000' }] }, '고액 결재?'),
         gnode('a1', 'send_message', -0.6, 2, { channel: 'general', message: '💸 {{approval.requester}}님의 "{{approval.title}}" ({{approval.amount}}원) 승인 완료' }),
-        gnode('a2', 'send_email', -0.6, 3, { to: 'finance@aurora.io', subject: '[지급 요청] {{approval.title}}', body: '승인된 결재 건의 지급을 요청드립니다.' }),
+        gnode('a2', 'send_email', -0.6, 3, { to: 'finance@example.com', subject: '[지급 요청] {{approval.title}}', body: '승인된 결재 건의 지급을 요청드립니다.' }),
         gnode('a3', 'send_message', 0.6, 2, { channel: 'general', message: '✅ {{approval.title}} 결재가 승인되었어요.' }),
       ],
       edges: [gedge('t1', 'c1'), gedge('c1', 'a1', 'true'), gedge('a1', 'a2'), gedge('c1', 'a3', 'false')],
@@ -84,7 +84,7 @@ export const TEMPLATES: WorkflowTemplate[] = [
     build: () => ({
       nodes: [
         gnode('t1', 'schedule', 0, 0, { cron: '0 17 * * 5' }),
-        gnode('a1', 'http_request', 0, 1, { method: 'GET', url: 'https://analytics.aurora.io/v1/metrics?range=7d' }),
+        gnode('a1', 'http_request', 0, 1, { method: 'GET', url: 'https://example.com/metrics?range=7d' }),
         gnode('a2', 'ai_summary', 0, 2, { input: '{{body}}', style: 'report' }),
         gnode('a3', 'create_doc', 0, 3, { title: '주간 리포트 · {{now.date}}', template: 'weekly', folder: '제품 / 주간 리포트' }),
         gnode('a4', 'send_message', 0, 4, { channel: 'product', message: '📊 이번 주 리포트가 준비됐어요!\n{{ai.summary}}' }),
@@ -127,7 +127,7 @@ export const TEMPLATES: WorkflowTemplate[] = [
         gnode('c1', 'if_else', 0, 1, { match: 'any', rules: [{ id: 'r1', field: 'body.severity', op: 'eq', value: 'critical' }, { id: 'r2', field: 'body.severity', op: 'eq', value: 'high' }] }, '심각도 높음?'),
         gnode('a1', 'send_message', -0.6, 2, { channel: 'incidents', message: '🚨 @channel {{body.service}} 장애 감지 ({{body.severity}})' }),
         gnode('d1', 'delay', -0.6, 3, { amount: 15, unit: 'minutes' }),
-        gnode('a2', 'http_request', -0.6, 4, { method: 'POST', url: 'https://events.pagerduty.com/v2/enqueue', body: '{ "routing_key": "aurora-oncall", "severity": "{{body.severity}}" }' }),
+        gnode('a2', 'http_request', -0.6, 4, { method: 'POST', url: 'https://events.pagerduty.com/v2/enqueue', body: '{ "routing_key": "YOUR_ROUTING_KEY", "severity": "{{body.severity}}" }' }),
         gnode('a3', 'create_task', 0.6, 2, { project: 'nexus', title: '[모니터링] {{body.service}} 경고 확인', assignee: 'u_devops', priority: 'medium' }),
       ],
       edges: [gedge('t1', 'c1'), gedge('c1', 'a1', 'true'), gedge('a1', 'd1'), gedge('d1', 'a2'), gedge('c1', 'a3', 'false')],

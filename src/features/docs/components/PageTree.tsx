@@ -4,10 +4,11 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronRight, Clock, Home, LayoutTemplate, PanelLeftClose, Plus, Search, Star, X, BookOpen } from 'lucide-react'
 import { cn, timeAgo } from '@/lib/utils'
 import { Kbd, Tooltip } from '@/components/ui'
-import { useDocs } from '../store'
+import { isDocStarred, useDocs } from '../store'
 import { closeOverlayTree, setTreeVisible, useDocsUI } from '../uiStore'
 import { docMatches, useChildrenMap, useCreateDoc } from '../hooks'
 import { TreeItem } from './TreeItem'
+import { useWorkspace } from '@/lib/workspace'
 
 function Section({ title, icon, children, action, defaultOpen = true }: { title: string; icon: ReactNode; children: ReactNode; action?: ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -33,6 +34,7 @@ function Section({ title, icon, children, action, defaultOpen = true }: { title:
 }
 
 export function PageTree({ activeId }: { activeId?: string }) {
+  const workspaceName = useWorkspace().name
   const navigate = useNavigate()
   const docs = useDocs((s) => s.docs)
   const recentIds = useDocs((s) => s.recentIds)
@@ -42,7 +44,7 @@ export function PageTree({ activeId }: { activeId?: string }) {
   const compact = useDocsUI((s) => s.compact)
   const [q, setQ] = useState('')
 
-  const starred = useMemo(() => docs.filter((d) => d.starred), [docs])
+  const starred = useMemo(() => docs.filter((d) => isDocStarred(d)), [docs])
   const recent = useMemo(() => recentIds.map((id) => docs.find((d) => d.id === id)).filter((d): d is NonNullable<typeof d> => !!d).slice(0, 5), [recentIds, docs])
   const results = useMemo(() => (q.trim() ? docs.filter((d) => docMatches(d, q.trim())).slice(0, 30) : []), [docs, q])
   const roots = childrenMap.get(null) ?? []
@@ -67,7 +69,7 @@ export function PageTree({ activeId }: { activeId?: string }) {
           </div>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-semibold">오로라랩스 위키</div>
+          <div className="truncate text-[13px] font-semibold">{workspaceName} 위키</div>
           <div className="text-[11px] text-subtle">페이지 {docs.length}개</div>
         </div>
         <Tooltip content={compact ? '닫기' : '사이드바 접기'} side="bottom">

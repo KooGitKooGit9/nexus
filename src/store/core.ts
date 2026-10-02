@@ -79,7 +79,9 @@ syncAcrossTabs(useCore)
 
 /* ───────────── Convenience selectors / helpers ───────────── */
 
-export const useCurrentUser = () => useCore((s) => s.users.find((u) => u.id === s.currentUserId)!)
+/** Placeholder while the member's own User hasn't arrived yet (e.g. right after joining) — never crash. */
+const NO_USER: User = { id: '', name: '', nameEn: '', title: '', department: '' as User['department'], email: '', phone: '', location: '', timezone: 'Asia/Seoul', managerId: null, presence: 'online', skills: [], joinedAt: '', birthday: '' }
+export const useCurrentUser = () => useCore((s) => s.users.find((u) => u.id === s.currentUserId)) ?? NO_USER
 
 /** Returns a user by id (including the bot). Stable for use in render. */
 export function useUser(id: string | undefined | null): User | undefined {

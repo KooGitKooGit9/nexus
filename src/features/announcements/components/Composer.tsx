@@ -10,6 +10,7 @@ import type { AnnouncementCategory } from '@/features/goals/types'
 import { CATEGORIES, CATEGORY_META } from '../meta'
 import { Markdown } from './Markdown'
 import { Cover } from './AnnouncementCard'
+import { isHuman } from '@/features/people/format'
 
 const EMOJIS = ['📢', '🎉', '🚀', '🎤', '👋', '🎁', '🏢', '🔐', '🥂', '🌕', '💡', '🛠️', '📅', '❤️']
 
@@ -61,7 +62,7 @@ export function Composer({ open, onClose, onPublished }: { open: boolean; onClos
   const publish = () => {
     if (!canPublish) return
     const id = add({ title: title.trim(), category, cover, emoji, body: body.trim(), pinned, authorId: getCurrentUserId() })
-    const others = useCore.getState().users.map((u) => u.id)
+    const others = useCore.getState().users.filter(isHuman).map((u) => u.id)
     notifyMembers(others, {
       type: 'system',
       title: `새 공지: ${title.trim()}`,

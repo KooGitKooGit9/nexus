@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { LayoutGrid, List, MessageSquare, Phone, Search, SearchX, ChevronRight } from 'lucide-react'
+import { LayoutGrid, List, MessageSquare, Phone, Search, SearchX, ChevronRight, UserPlus } from 'lucide-react'
 import { useCore } from '@/store/core'
 import type { Department, Presence, User } from '@/store/types'
 import { Avatar, Button, EmptyState, Input, PRESENCE_COLOR, PRESENCE_LABEL, Tabs, Tooltip, useLiveUsers } from '@/components/ui'
@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils'
 import { DEPARTMENTS, DEPT_META, useNow } from '../lib'
 import { ProfileCard } from '../components/ProfileCard'
 import { Chip, DeptBadge, LocalTime, useQuickActions } from '../components/common'
+import { isHuman } from '@/features/people/format'
+import { useNavigate } from 'react-router-dom'
 
 type PresenceFilter = 'all' | Presence
 type ViewMode = 'grid' | 'list'
@@ -15,11 +17,15 @@ type ViewMode = 'grid' | 'list'
 export function matchesUser(u: User, q: string) {
   const s = q.trim().toLowerCase()
   if (!s) return true
-  return [u.name, u.nameEn, u.title, u.department, u.email, u.location, u.statusText, ...u.skills].some((f) => f?.toLowerCase().includes(s))
+  return [u.name, u.nameEn, u.title, u.department, u.email, u.location, u.statusText, ...(u.skills ?? [])].some((f) => f?.toLowerCase().includes(s))
 }
 
 export function MembersTab() {
-  const users = useLiveUsers()
+  const live = useLiveUsers()
+  const users = useMemo(() => live.filter(isHuman), [live])
+  const navigate = useNavigate()
+  // only departments somebody actually belongs to (real workspaces may not use departments at all)
+  const usedDepts = useMemo(() => DEPARTMENTS.filter((d) => users.some((u) => u.department === d)), [users])
   const meId = useCore((s) => s.currentUserId)
   const now = useNow(30_000)
   const [q, setQ] = useState('')
@@ -99,14 +105,14 @@ export function MembersTab() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      {usedDepts.length > 0 && <div className="flex flex-wrap gap-2">
         <Chip active={dept === 'all'} onClick={() => setDept('all')} count={deptCounts.all}>전체</Chip>
-        {DEPARTMENTS.map((d) => (
+        {usedDepts.map((d) => (
           <Chip key={d} active={dept === d} onClick={() => setDept(dept === d ? 'all' : d)} color={DEPT_META[d].color} count={deptCounts[d] ?? 0}>
             {DEPT_META[d].emoji} {d}
           </Chip>
         ))}
-      </div>
+      </div>}
 
       {filtered.length === 0 ? (
         <EmptyState
@@ -133,6 +139,17 @@ export function MembersTab() {
         </motion.div>
       ) : (
         <MemberList users={filtered} now={now} meId={meId} />
+      )}
+
+      {users.length <= 1 && !q && (
+        <div className="glass flex flex-col items-center gap-3 rounded-2xl px-6 py-8 text-center sm:flex-row sm:text-left">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent-gradient text-white shadow-glow-sm"><UserPlus className="h-5 w-5" /></span>
+          <div className="min-w-0 flex-1">
+            <div className="text-[15px] font-semibold text-fg">아직 혼자예요 👋</div>
+            <div className="mt-0.5 text-[13px] text-muted">동료를 초대하면 여기에서 프로필, 근무 시간대, 상태를 한눈에 볼 수 있어요.</div>
+          </div>
+          <Button variant="primary" leftIcon={<UserPlus className="h-4 w-4" />} onClick={() => navigate('/settings/members')}>동료 초대하기</Button>
+        </div>
       )}
     </div>
   )
@@ -166,7 +183,7 @@ function MemberList({ users, now, meId }: { users: User[]; now: Date; meId: stri
                 <div className="truncate text-xs text-subtle">{u.email}</div>
               </div>
             </div>
-            <span className="hidden truncate text-[13px] text-muted md:block">{u.title}</span>
+            <span className="hidden truncate text-[13px] text-muted md:block">{u.title || <span className="text-subtle">—</span>}</span>
             <span className="hidden md:block"><DeptBadge department={u.department} /></span>
             <span className="hidden truncate text-[13px] text-muted xl:block">{u.statusEmoji} {u.statusText ?? <span className="text-subtle">—</span>}</span>
             <span className="hidden md:block"><LocalTime user={u} now={now} /></span>

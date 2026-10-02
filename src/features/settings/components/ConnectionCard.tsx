@@ -1,4 +1,4 @@
-import { LogOut, RefreshCw, Server, Sparkles, Wifi, WifiOff } from 'lucide-react'
+import { LogOut, Server, Sparkles, Wifi, WifiOff } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Avatar, Badge, Button, Tooltip } from '@/components/ui'
 import { useCore, useCurrentUser } from '@/store/core'
@@ -8,8 +8,7 @@ import { cn } from '@/lib/utils'
 import { SettingsSection } from './Section'
 
 export function logout() {
-  clearSession()
-  location.href = '/'
+  void clearSession() // POSTs /api/auth/logout, then navigates to /login itself
 }
 
 /** Live connection status: server / offline, who is online right now, AI availability, sign-out. */
@@ -51,7 +50,7 @@ export function ConnectionCard({ delay = 0 }: { delay?: number }) {
         <div className="rounded-2xl border border-line/10 bg-line/[0.03] p-4">
           <div className="flex items-center gap-2 text-[12px] text-muted"><Sparkles className="h-4 w-4 text-accent" /> Nexus AI</div>
           <div className="mt-2 text-[15px] font-semibold">{aiEnabled ? '사용 가능' : server ? 'API 키 미설정' : '서버 필요'}</div>
-          <div className="mt-1 truncate text-[11.5px] text-subtle">{aiEnabled ? aiModel || 'Gemini' : 'server/.env 에 GEMINI_API_KEY를 설정하세요'}</div>
+          <div className="mt-1 truncate text-[11.5px] text-subtle">{aiEnabled ? aiModel || 'Gemini' : '서버 환경 변수에 GEMINI_API_KEY를 설정하세요'}</div>
         </div>
         <div className="rounded-2xl border border-line/10 bg-line/[0.03] p-4">
           <div className="text-[12px] text-muted">로그인 계정</div>
@@ -88,9 +87,6 @@ export function ConnectionCard({ delay = 0 }: { delay?: number }) {
           ) : (
             <div className="text-[12.5px] text-subtle">접속 정보를 불러오는 중…</div>
           )}
-          <p className="mt-3 flex items-center gap-1.5 text-[11.5px] text-subtle">
-            <RefreshCw className="h-3 w-3" /> 다른 구성원으로 동시에 테스트하려면 새 탭에서 주소 뒤에 <code className="rounded bg-line/10 px-1 font-mono">?as=u_fe</code>를 붙여 여세요.
-          </p>
         </div>
       )}
     </SettingsSection>

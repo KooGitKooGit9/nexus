@@ -91,7 +91,7 @@ export function Avatar({ user, userId, size = 'md', showPresence, ring, classNam
   const fromStore = useUser(userId)
   const u = user ?? fromStore
   const presence = useLivePresence(u)
-  if (!u) return <div className={cn('rounded-full bg-surface-3', sizeMap[size], className)} />
+  if (!u) return <div title="나간 멤버" className={cn('flex shrink-0 items-center justify-center rounded-full bg-surface-3 text-subtle', sizeMap[size], className)}>?</div>
   const isBot = u.id === 'u_bot'
   return (
     <div className={cn('relative shrink-0', className)} title={u.name}>

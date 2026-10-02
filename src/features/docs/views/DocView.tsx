@@ -160,7 +160,7 @@ export function DocView({ doc }: { doc: Doc }) {
           <div className="mt-3 mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line/[0.07] pb-4 text-[12.5px] text-subtle">
             <span className="flex items-center gap-1.5">
               {author && <Avatar user={author} size="xs" />}
-              <span className="text-muted">{author?.name}</span> 작성 · {formatDate(doc.createdAt, 'yyyy년 M월 d일')}
+              <span className="text-muted">{author?.name ?? '나간 멤버'}</span> 작성 · {formatDate(doc.createdAt, 'yyyy년 M월 d일')}
             </span>
             <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {timeAgo(doc.updatedAt)} 업데이트</span>
             <span className="flex items-center gap-1.5"><Type className="h-3.5 w-3.5" /> {st.chars.toLocaleString()}자 · 약 {st.minutes}분 읽기</span>

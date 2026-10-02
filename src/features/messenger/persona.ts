@@ -7,6 +7,7 @@
  * caller falls back to the rule-based engine in ./sim.
  */
 import { useSyncStatus } from '@/lib/sync'
+import { isDemoWorkspace } from '@/lib/workspace'
 import { getUser } from '@/store/core'
 import type { User } from '@/store/types'
 import { useMessenger } from './store'
@@ -43,7 +44,8 @@ function takeSlot(): boolean {
 /** Whether it's worth trying Gemini at all right now. */
 export function personaAvailable() {
   const s = useSyncStatus.getState()
-  return s.mode === 'server' && s.aiEnabled && Date.now() >= disabledUntil
+  // simulated teammates (and their AI voices) exist only in demo workspaces
+  return s.mode === 'server' && s.aiEnabled && Date.now() >= disabledUntil && isDemoWorkspace()
 }
 
 /* ───────────── prompt ───────────── */
@@ -209,7 +211,9 @@ export async function personaReply(speakerId: string, trigger: Message): Promise
     })
     if (!r.ok) {
       // missing key / bad key / quota: pause Gemini for a bit, the rule engine takes over
-      if (r.status === 503 || r.status === 401 || r.status === 403) disabledUntil = Date.now() + 5 * 60_000
+      // 402 = the workspace's AI quota is used up: stay silent (rule engine only) for a good while
+      if (r.status === 402) disabledUntil = Date.now() + 30 * 60_000
+      else if (r.status === 503 || r.status === 401 || r.status === 403) disabledUntil = Date.now() + 5 * 60_000
       else if (r.status === 429) disabledUntil = Date.now() + 60_000
       return null
     }

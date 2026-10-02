@@ -90,9 +90,16 @@ export const useFiles = create<FilesState>()(
 
       toggleStar: (ids) =>
         set((s) => {
+          const me = getCurrentUserId()
           const targets = s.files.filter((f) => ids.includes(f.id))
-          const value = targets.some((f) => !f.starred)
-          return { files: s.files.map((f) => (ids.includes(f.id) ? { ...f, starred: value } : f)) }
+          const value = targets.some((f) => !isFileStarred(f, me))
+          return {
+            files: s.files.map((f) => {
+              if (!ids.includes(f.id)) return f
+              const base = (f.starredBy ?? (f.starred ? [me] : [])).filter((x) => x !== me)
+              return { ...f, starredBy: value ? [...base, me] : base, starred: undefined }
+            }),
+          }
         }),
 
       trashItems: (ids) => set((s) => ({ files: s.files.map((f) => (ids.includes(f.id) ? { ...f, trashed: true, trashedAt: now() } : f)) })),
@@ -141,3 +148,8 @@ export const useFiles = create<FilesState>()(
   ),
 )
 syncAcrossTabs(useFiles)
+
+/** Stars are personal: did `me` star this item? (demo seed files carry a legacy `starred` flag) */
+export function isFileStarred(f: Pick<FileItem, 'starred' | 'starredBy'>, me: string = getCurrentUserId()): boolean {
+  return f.starredBy ? f.starredBy.includes(me) : !!f.starred
+}

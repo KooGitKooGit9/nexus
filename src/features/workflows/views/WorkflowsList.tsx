@@ -10,6 +10,7 @@ import { HeroStats } from '../components/HeroStats'
 import { WorkflowCard } from '../components/WorkflowCard'
 import { TemplateGalleryModal, TemplateGrid } from '../components/TemplateGallery'
 import { TEMPLATES } from '../templates'
+import { blockIfWorkflowLimit, WorkflowLimitModal } from '../limits'
 
 type Filter = 'all' | 'on' | 'off'
 
@@ -23,6 +24,7 @@ export function WorkflowsList() {
   const [q, setQ] = useState('')
 
   const setGallery = (open: boolean) => {
+    if (open && blockIfWorkflowLimit()) return
     const next = new URLSearchParams(params)
     if (open) next.set('new', '1')
     else next.delete('new')
@@ -32,6 +34,10 @@ export function WorkflowsList() {
   }
 
   const use = (tplId: string) => {
+    if (blockIfWorkflowLimit()) {
+      if (galleryOpen) setGallery(false)
+      return
+    }
     const id = createFromTemplate(tplId)
     const tpl = TEMPLATES.find((t) => t.id === tplId)
     toast(tpl ? `"${tpl.name}" 템플릿으로 생성했어요` : '새 워크플로우를 만들었어요', { emoji: tpl?.emoji ?? '✨', variant: 'success', description: '캔버스에서 단계를 수정하고 활성화하세요' })
@@ -101,7 +107,7 @@ export function WorkflowsList() {
         <div className="mb-4 flex items-end justify-between gap-3">
           <div>
             <h2 className="font-display text-lg font-semibold text-fg">템플릿 갤러리</h2>
-            <p className="mt-0.5 text-sm text-muted">오로라랩스 팀이 가장 많이 쓰는 자동화</p>
+            <p className="mt-0.5 text-sm text-muted">클릭 한 번으로 시작하는 자동화 템플릿</p>
           </div>
           <Button variant="ghost" size="sm" onClick={() => setGallery(true)}>전체 보기</Button>
         </div>
@@ -109,6 +115,7 @@ export function WorkflowsList() {
       </FadeIn>
 
       <TemplateGalleryModal open={galleryOpen} onClose={() => setGallery(false)} onUse={use} />
+      <WorkflowLimitModal />
     </Page>
   )
 }

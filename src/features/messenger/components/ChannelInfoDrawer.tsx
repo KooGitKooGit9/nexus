@@ -13,6 +13,7 @@ import { startHuddle } from '../actions'
 import { InlinePreview } from '../markdown'
 import { FileCard } from './Attachments'
 import type { Attachment, Channel } from '../types'
+import { joinMeta } from '@/features/people/format'
 
 type Tab = 'about' | 'members' | 'files' | 'pins'
 
@@ -159,7 +160,7 @@ export function ChannelInfoDrawer({ channel, onAddMembers }: { channel: Channel;
                 <Avatar user={u} size="md" showPresence />
                 <div className="min-w-0 flex-1">
                   <div className="text-[13.5px] font-medium">{u.name} {u.statusEmoji}</div>
-                  <div className="truncate text-[11.5px] text-subtle">{u.title} · {PRESENCE_LABEL[u.presence]}</div>
+                  <div className="truncate text-[11.5px] text-subtle">{joinMeta(u.title, PRESENCE_LABEL[u.presence])}</div>
                 </div>
                 {u.id === channel.createdBy && <Badge tone="accent">관리자</Badge>}
               </div>

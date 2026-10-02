@@ -6,6 +6,7 @@ import { Overview } from './views/Overview'
 import { ProjectView } from './views/ProjectView'
 import { TaskDrawer } from './components/TaskDrawer'
 import { CreateTaskModal } from './components/CreateTaskModal'
+import { CreateProjectModal } from './components/CreateProjectModal'
 
 /** `c` opens the create-task modal while on any projects page. */
 function useCreateHotkey(open: () => void, disabled: boolean) {
@@ -35,12 +36,15 @@ export default function ProjectsPage() {
   // a stale/invalid `?task=` (deleted task) shouldn't disable the shortcut
   const drawerOpen = useProjects((s) => !!taskId && s.tasks.some((t) => t.id === taskId))
   useCreateHotkey(openNew, drawerOpen || isNew)
+  // a brand-new workspace has no project yet: "new task" first creates the project the task will live in
+  const hasProjects = useProjects((s) => s.projects.some((p) => !p.archived))
 
   return (
     <>
       {projectId ? <ProjectView key={projectId} projectId={projectId} /> : <Overview />}
       <TaskDrawer />
-      <CreateTaskModal open={isNew} onClose={closeNew} defaultProjectId={projectId} />
+      <CreateTaskModal open={isNew && hasProjects} onClose={closeNew} defaultProjectId={projectId} />
+      <CreateProjectModal open={isNew && !hasProjects} onClose={closeNew} />
     </>
   )
 }

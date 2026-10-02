@@ -88,7 +88,7 @@ export function ChannelHeader({ channel, onMembers, editTopicSignal }: { channel
             <div className="flex items-center gap-1.5 truncate text-[12px] text-muted">
               {PRESENCE_LABEL[otherPresence]}
               {other.statusText && <span className="truncate">· {other.statusEmoji} {other.statusText}</span>}
-              <span className="text-subtle">· {other.title}</span>
+              {other.title && <span className="text-subtle">· {other.title}</span>}
             </div>
           ) : (
             <button

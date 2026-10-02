@@ -119,7 +119,8 @@ export const useProjects = create<ProjectsState>()(
       createTask: (input) => {
         const { projects, tasks } = get()
         const project = projects.find((p) => p.id === input.projectId)
-        const number = project?.nextNumber ?? Math.max(0, ...tasks.filter((t) => t.projectId === input.projectId).map((t) => t.number)) + 1
+        // several members create tasks concurrently: never reuse a number that already exists in the project
+        const number = Math.max(project?.nextNumber ?? 0, Math.max(0, ...tasks.filter((t) => t.projectId === input.projectId).map((t) => t.number)) + 1)
         const status = input.status ?? 'todo'
         const col = tasks.filter((t) => t.projectId === input.projectId && t.status === status)
         const me = getCurrentUserId()

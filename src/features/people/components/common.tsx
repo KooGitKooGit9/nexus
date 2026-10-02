@@ -3,14 +3,15 @@ import type { Department, User } from '@/store/types'
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import { useUI } from '@/store/core'
-import { DEPT_META, isLocalNight, localTimeIn, tzDayShift, tzDiffHours } from '../lib'
+import { deptMeta, isLocalNight, localTimeIn, tzDayShift, tzDiffHours } from '../lib'
 
 /** Text color for a department hex: darkened in light mode (amber/lime/cyan are unreadable on white), raw in dark. */
 export const DEPT_TEXT_CLS = '[color:color-mix(in_srgb,var(--dc)_62%,black)] dark:[color:var(--dc)]'
 export const deptVar = (color: string) => ({ '--dc': color }) as React.CSSProperties
 
 export function DeptBadge({ department, className, size = 'sm' }: { department: Department; className?: string; size?: 'sm' | 'md' }) {
-  const meta = DEPT_META[department]
+  const meta = deptMeta(department)
+  if (!department) return null
   return (
     <span
       className={cn(

@@ -9,6 +9,7 @@ import { useCore, useUI } from '@/store/core'
 import { Avatar, Kbd, PRESENCE_COLOR, useLivePresence } from '@/components/ui'
 import { buildCommands, groupEmoji, loadRecent, pushRecent, searchAll, type PaletteItem, type RecentEntry } from './palette/catalog'
 import { scoreMatch } from './palette/match'
+import { isHuman, joinMeta } from '@/features/people/format'
 
 interface Section {
   key: string
@@ -96,12 +97,13 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
     const settings = rank(cmds.settings, 5)
 
     const people = users
-      .map((u) => ({ u, s: scoreMatch(q, u.name, u.nameEn, u.title, u.department, u.email.split('@')[0]) }))
+      .filter(isHuman)
+      .map((u) => ({ u, s: scoreMatch(q, u.name, u.nameEn ?? '', u.title ?? '', u.department ?? '', (u.email ?? '').split('@')[0]) }))
       .filter((x) => x.s >= 40)
       .sort((a, b) => b.s - a.s)
       .slice(0, 4)
       .map<PaletteItem>(({ u }) => ({
-        id: `person:${u.id}`, title: u.name, subtitle: `${u.title} · ${u.department}`, userId: u.id, href: `/people/${u.id}`,
+        id: `person:${u.id}`, title: u.name, subtitle: joinMeta(u.title, u.department) || u.email, userId: u.id, href: `/people/${u.id}`,
         run: () => navigate(`/people/${u.id}`),
       }))
     const peopleHrefs = new Set(people.map((p) => p.href))

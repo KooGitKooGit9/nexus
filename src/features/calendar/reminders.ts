@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { getCurrentUserId, notify } from '@/store/core'
+import { getSessionWorkspaceId } from '@/lib/session'
 import { useCalendar } from './store'
 import { involves } from './utils'
 
@@ -8,7 +9,7 @@ const WINDOW_MS = 10 * 60_000
 let started = false
 
 // per user: several members may share one browser (`?as=` tabs)
-const keyFor = () => `${KEY}@${getCurrentUserId()}`
+const keyFor = () => `${KEY}@${getSessionWorkspaceId() ?? 'local'}:${getCurrentUserId()}`
 
 function readSent(): string[] {
   try { return JSON.parse(localStorage.getItem(keyFor()) ?? '[]') as string[] } catch { return [] }

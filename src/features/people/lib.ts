@@ -18,6 +18,12 @@ export const DEPT_META: Record<Department, { color: string; emoji: string; gradi
   피플팀: { color: '#a3e635', emoji: '🌱', gradient: 'from-lime-400 to-emerald-600' },
 }
 
+/** Department look (members of real workspaces may have no / a custom department). */
+const NO_DEPT = { color: '#94a3b8', emoji: '👤', gradient: 'from-slate-400 to-slate-600' }
+export function deptMeta(d: string | null | undefined): { color: string; emoji: string; gradient: string } {
+  return (d && (DEPT_META as Record<string, { color: string; emoji: string; gradient: string }>)[d]) || NO_DEPT
+}
+
 /* ───────────── Time helpers ───────────── */
 
 /** Re-renders every `ms` and returns current Date. */
@@ -142,7 +148,7 @@ export function leaveCovers(l: LeaveEntry, d: Date) {
 
 /** Default work mode inferred from the user's profile. */
 export function defaultWorkMode(u: User): Exclude<WorkMode, 'leave'> {
-  if (u.location.includes('재택') || u.timezone !== 'Asia/Seoul') return 'remote'
+  if ((u.location ?? '').includes('재택') || (u.timezone && u.timezone !== 'Asia/Seoul')) return 'remote'
   if (u.statusText?.includes('방문') || u.statusText?.includes('외근')) return 'field'
   return 'office'
 }
@@ -197,6 +203,7 @@ export function managerChain(users: User[], id: string): string[] {
 }
 
 export function tenureLabel(joinedAt: string) {
+  if (!joinedAt || Number.isNaN(new Date(joinedAt).getTime())) return ''
   const months = Math.max(0, Math.floor((Date.now() - new Date(joinedAt).getTime()) / (30.44 * 86400000)))
   const y = Math.floor(months / 12)
   const m = months % 12

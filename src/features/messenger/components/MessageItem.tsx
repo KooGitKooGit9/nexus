@@ -107,7 +107,7 @@ export const MessageItem = memo(function MessageItem({ message: m, compact, repl
         {!compact && (
           <div className="flex items-baseline gap-2">
             <Popover placement="bottom-start" className="w-72 p-0" trigger={({ toggle }) => (
-              <button onClick={toggle} className="text-[14.5px] font-semibold text-fg hover:underline">{author?.name ?? '알 수 없음'}</button>
+              <button onClick={toggle} className="text-[14.5px] font-semibold text-fg hover:underline">{author?.name ?? '나간 멤버'}</button>
             )}>
               {(close) => <ProfileCard userId={m.userId} onDone={close} />}
             </Popover>

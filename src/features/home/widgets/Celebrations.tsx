@@ -18,10 +18,11 @@ export function Celebrations({ className, delay }: { className?: string; delay?:
   const items = useMemo(() => {
     const out: Item[] = []
     for (const u of users) {
-      const [bm, bd] = u.birthday.split('-').map(Number)
+      if (u.id === 'u_bot') continue
+      const [bm, bd] = (u.birthday ?? '').split('-').map(Number)
       if (bm === month) out.push({ userId: u.id, kind: 'birthday', day: bd })
       const j = new Date(u.joinedAt)
-      if (j.getMonth() + 1 === month && j.getFullYear() < now.getFullYear()) out.push({ userId: u.id, kind: 'anniversary', day: j.getDate(), years: now.getFullYear() - j.getFullYear() })
+      if (!Number.isNaN(j.getTime()) && j.getMonth() + 1 === month && j.getFullYear() < now.getFullYear()) out.push({ userId: u.id, kind: 'anniversary', day: j.getDate(), years: now.getFullYear() - j.getFullYear() })
     }
     return out.sort((a, b) => (a.day >= today ? 0 : 1) - (b.day >= today ? 0 : 1) || a.day - b.day)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -36,7 +37,9 @@ export function Celebrations({ className, delay }: { className?: string; delay?:
   return (
     <Widget className={className} delay={delay} title="생일 · 입사 기념일" subtitle={`${month}월 · ${items.length}명`} icon={<Cake />} gradient="from-pink-500 to-rose-600">
       {items.length === 0 ? (
-        <MiniEmpty emoji="🎈" title={`${month}월에는 기념일이 없어요`} />
+        <MiniEmpty emoji="🎈" title={`${month}월에는 기념일이 없어요`}>
+          {!users.some((u) => u.id !== 'u_bot' && /^\d{2}-\d{2}$/.test(u.birthday ?? '')) && '프로필에 생일을 등록하면 여기에서 함께 축하할 수 있어요.'}
+        </MiniEmpty>
       ) : (
         <ul className="space-y-1.5">
           {items.slice(0, 5).map((it) => {

@@ -13,10 +13,12 @@ import { CATEGORIES, CATEGORY_META } from './meta'
 import { AnnouncementCard } from './components/AnnouncementCard'
 import { AnnouncementDetail } from './components/AnnouncementDetail'
 import { Composer } from './components/Composer'
+import { useWorkspace } from '@/lib/workspace'
 
 type Filter = '전체' | AnnouncementCategory
 
 export default function AnnouncementsPage() {
+  const workspaceName = useWorkspace().name
   const [params, setParams] = useSearchParams()
   const announcements = useGoals((s) => s.announcements)
   const markAllRead = useGoals((s) => s.markAllRead)
@@ -76,7 +78,7 @@ export default function AnnouncementsPage() {
       <PageHeader
         icon={<Megaphone />}
         title="공지사항"
-        subtitle={`오로라랩스 전사 소식 · 안 읽은 공지 ${unreadCount}개`}
+        subtitle={`${workspaceName} 전사 소식 · 안 읽은 공지 ${unreadCount}개`}
         actions={
           <>
             <Button variant="ghost" size="sm" leftIcon={<CheckCheck className="h-4 w-4" />} onClick={markAllRead} disabled={!unreadCount}>

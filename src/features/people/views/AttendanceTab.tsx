@@ -16,12 +16,15 @@ import type { WorkMode } from '../types'
 import { ClockCard } from '../components/ClockCard'
 import { WeeklyHours } from '../components/WeeklyHours'
 import { Chip } from '../components/common'
+import { isHuman } from '@/features/people/format'
+import { isDemoWorkspace } from '@/lib/workspace'
 
 const STATUS_META: Record<AttendanceStatus, { label: string; cls: string; dot: string }> = {
   working: { label: '근무 중', cls: 'text-emerald-400', dot: 'bg-emerald-400' },
   left: { label: '퇴근', cls: 'text-muted', dot: 'bg-zinc-400' },
   notyet: { label: '미출근', cls: 'text-subtle', dot: 'bg-zinc-600' },
   leave: { label: '휴가', cls: 'text-pink-400', dot: 'bg-pink-400' },
+  unknown: { label: '기록 공유 전', cls: 'text-subtle', dot: 'bg-zinc-600/60' },
 }
 
 export function AttendanceTab() {
@@ -41,20 +44,22 @@ export function AttendanceTab() {
 }
 
 function TeamTable() {
-  const users = useCore((s) => s.users)
+  const allUsers = useCore((s) => s.users)
+  const users = useMemo(() => allUsers.filter(isHuman), [allUsers])
+  const [simulate] = useState(isDemoWorkspace)
   const meId = useCore((s) => s.currentUserId)
   const leaves = useAllLeaves()
   const clock = usePeople((s) => s.clock)
   const now = useNow(30_000)
   const navigate = useNavigate()
   const [mode, setMode] = useState<WorkMode | 'all'>('all')
-  const rows = useMemo(() => teamAttendance(users, leaves, clock, meId, now), [users, leaves, clock, meId, now])
+  const rows = useMemo(() => teamAttendance(users, leaves, clock, meId, now, simulate), [users, leaves, clock, meId, now, simulate])
   const counts = useMemo(() => {
     const c: Record<string, number> = {}
-    rows.forEach((r) => (c[r.mode] = (c[r.mode] ?? 0) + 1))
+    rows.forEach((r) => { if (r.status !== 'unknown') c[r.mode] = (c[r.mode] ?? 0) + 1 })
     return c
   }, [rows])
-  const shown = rows.filter((r) => mode === 'all' || r.mode === mode)
+  const shown = rows.filter((r) => mode === 'all' || (r.mode === mode && r.status !== 'unknown'))
   const working = rows.filter((r) => r.status === 'working').length
   const serverMode = useSyncStatus((s) => s.mode === 'server')
   const online = useSyncStatus((s) => s.online)
@@ -116,11 +121,11 @@ function TeamTable() {
                             </span>
                           )}
                         </div>
-                        <div className="truncate text-[11px] text-subtle">{r.note ?? r.user.title}</div>
+                        {(r.note ?? r.user.title) && <div className="truncate text-[11px] text-subtle">{r.note ?? r.user.title}</div>}
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-2.5"><Badge tone={wm.tone}>{wm.emoji} {wm.label}</Badge></td>
+                  <td className="px-3 py-2.5">{r.status === 'unknown' ? <span className="text-subtle">—</span> : <Badge tone={wm.tone}>{wm.emoji} {wm.label}</Badge>}</td>
                   <td className="px-3 py-2.5 font-mono text-[13px] tabular-nums text-fg/90">{r.inLabel ?? <span className="text-subtle">—</span>}</td>
                   <td className="px-3 py-2.5 font-mono text-[13px] tabular-nums text-muted">{r.outLabel ?? <span className="text-subtle">—</span>}</td>
                   <td className="px-3 py-2.5">
@@ -147,6 +152,11 @@ function TeamTable() {
           </tbody>
         </table>
       </div>
+      {!simulate && rows.length > 1 && (
+        <p className="border-t border-line/[0.06] px-5 py-2.5 text-[11.5px] text-subtle">
+          지금은 내 출퇴근 기록만 보여요. 팀원 근태 공유는 곧 제공돼요. (승인된 휴가는 모두에게 표시돼요)
+        </p>
+      )}
     </Card>
   )
 }

@@ -4,7 +4,7 @@ import { Ellipsis, Folder, Star, Users } from 'lucide-react'
 import { cn, formatBytes, timeAgo } from '@/lib/utils'
 import { Avatar, AvatarStack, Menu, type MenuItem } from '@/components/ui'
 import { useUser } from '@/store/core'
-import { useFiles } from '../store'
+import { isFileStarred, useFiles } from '../store'
 import { useDriveUI } from '../uiStore'
 import { baseName, KIND_META, kindOf } from '../fileTypes'
 import type { FileItem } from '../types'
@@ -97,7 +97,7 @@ export function FolderCard({ item, count, selected, renaming, h, index }: { item
         ) : (
           <div className="flex items-center gap-1.5">
             <span className="truncate text-[13.5px] font-medium">{item.name}</span>
-            {item.starred && <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />}
+            {isFileStarred(item) && <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />}
           </div>
         )}
         <div className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-subtle">
@@ -130,7 +130,7 @@ export function FileCard({ item, selected, renaming, h, index }: { item: FileIte
     >
       <FilePreviewArt item={item} className="h-[132px] rounded-xl bg-line/[0.03]" />
       {selected && <div className="pointer-events-none absolute inset-1.5 h-[132px] rounded-xl ring-2 ring-inset ring-accent/60" />}
-      {item.starred && (
+      {isFileStarred(item) && (
         <span className="absolute left-3.5 top-3.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/40 backdrop-blur">
           <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
         </span>

@@ -7,7 +7,7 @@ import { AvatarStack, Button, EmptyState, Input, Menu, Modal, PageHeader, Tabs }
 import { toast, useCore } from '@/store/core'
 import { cn, timeAgo } from '@/lib/utils'
 import type { Board, TemplateId } from '../types'
-import { useWhiteboard } from '../store'
+import { isBoardStarred, useWhiteboard } from '../store'
 import { buildTemplate, TEMPLATES } from '../templates'
 import { BoardThumbnail } from '../components/BoardThumbnail'
 import { CreateBoardModal } from '../components/CreateBoardModal'
@@ -39,7 +39,7 @@ export function BoardList() {
   const shown = useMemo(
     () =>
       boards
-        .filter((b) => (filter === 'starred' ? b.starred : filter === 'mine' ? b.ownerId === meId : true))
+        .filter((b) => (filter === 'starred' ? isBoardStarred(b) : filter === 'mine' ? b.ownerId === meId : true))
         .filter((b) => {
           const s = q.trim().toLowerCase()
           if (!s) return true
@@ -128,7 +128,7 @@ export function BoardList() {
 function BoardCard({ board, index }: { board: Board; index: number }) {
   const navigate = useNavigate()
   const { toggleStar, duplicateBoard, deleteBoard, updateBoard } = useWhiteboard.getState()
-  const starred = useWhiteboard((s) => s.boards.find((b) => b.id === board.id)?.starred)
+  const starred = useWhiteboard((s) => { const b = s.boards.find((x) => x.id === board.id); return b ? isBoardStarred(b) : false })
   const owner = useCore((s) => s.users.find((u) => u.id === board.ownerId))
   const [renaming, setRenaming] = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)

@@ -3,8 +3,8 @@
  *
  * Every persisted zustand store registers here (via `syncAcrossTabs`). For each store, SYNC_SPEC lists
  * the *shared* collections — arrays of `{ id }` items that all users see (messages, tasks, docs…).
- * Everything else in the store's data is *per-user* state (drafts, read markers, prefs) and is saved
- * to the server under the logged-in user.
+ * Everything else in the store's data is *per-member* state (drafts, read markers, prefs) and is saved
+ * to the server under the logged-in member of the current workspace.
  *
  * Shared collections sync at item granularity: local changes are diffed against the last synced
  * snapshot → `{ upserts, deletes }` ops → WebSocket → server (SQLite) → broadcast to other clients,
@@ -15,7 +15,10 @@
  */
 import { create } from 'zustand'
 import type { StoreApi, UseBoundStore } from 'zustand'
-import { getSessionUserId } from './session'
+import { getSessionUserId, getSessionScope, setSessionIdentity } from './session'
+import { api, type Me, type WorkspaceKind } from './api'
+import { useWorkspaceStore } from './workspace'
+import { starterItems, STARTER_USER_STATE } from './starter'
 
 export const SYNC_SPEC: Record<string, string[]> = {
   core: ['users'],
@@ -40,6 +43,8 @@ interface SyncStatus {
   mode: SyncMode
   connected: boolean
   needsLogin: boolean
+  /** logged in, but no workspace yet → onboarding */
+  needsWorkspace: boolean
   online: string[] // userIds with an open connection
   aiEnabled: boolean
   aiModel: string
@@ -49,6 +54,7 @@ export const useSyncStatus = create<SyncStatus>(() => ({
   mode: 'connecting',
   connected: false,
   needsLogin: false,
+  needsWorkspace: false,
   online: [],
   aiEnabled: false,
   aiModel: '',
@@ -80,7 +86,14 @@ const stores = new Map<string, AnyStore>()
 const snapshots = new Map<string, Map<string, Map<string, string>>>()
 let applyingRemote = 0
 let started = false
-type Boot = { stores: Record<string, Record<string, { id: string }[]>>; seeded: Record<string, string[]>; userState: Record<string, Record<string, unknown>> }
+type Boot = {
+  stores: Record<string, Record<string, { id: string }[]>>
+  seeded: Record<string, string[]>
+  userState: Record<string, Record<string, unknown>>
+  online?: string[]
+  workspace: { id: string; name: string; kind: WorkspaceKind; plan: string }
+  memberId: string
+}
 /** Kept (and patched by incoming ops) so stores created later — lazy chunks — still hydrate correctly. */
 let bootCache: Boot | null = null
 
@@ -88,7 +101,7 @@ export function registerSyncedStore(name: string, store: AnyStore) {
   stores.set(name, store)
   if (started && bootCache) {
     const user = getSessionUserId()
-    if (user) void hydrateFromServer(name, store, bootCache, user).then(() => attach(name, store))
+    if (user) { hydrateFromServer(name, store, bootCache, user); attach(name, store) }
   }
 }
 
@@ -152,14 +165,20 @@ function connect() {
   const user = getSessionUserId()
   if (!user) return
   const proto = location.protocol === 'https:' ? 'wss' : 'ws'
-  ws = new WebSocket(`${proto}://${location.host}/ws?user=${encodeURIComponent(user)}`)
+  // identity comes from the session cookie
+  ws = new WebSocket(`${proto}://${location.host}/ws`)
   ws.onopen = () => {
     retry = 0
     useSyncStatus.setState({ connected: true })
     while (outbox.length && ws?.readyState === WebSocket.OPEN) ws.send(outbox.shift()!)
   }
-  ws.onclose = () => {
+  ws.onclose = (ev) => {
     useSyncStatus.setState({ connected: false })
+    // 4001 = session ended (logged out / password changed) · 4003 = removed from the workspace / it was deleted
+    if (ev.code === 4001) { location.assign('/login'); return }
+    if (ev.code === 4003) { location.assign('/'); return }
+    // a rejected upgrade (401) shows up as 1006 — after a few failures, check whether we're still signed in
+    if (retry >= 3) void api.me().then((m) => { if (!m.account) location.assign('/login') }).catch(() => {})
     const delay = Math.min(10_000, 500 * 2 ** retry++)
     setTimeout(connect, delay)
   }
@@ -169,8 +188,12 @@ function connect() {
     if (msg.type === 'ops') applyRemoteOps(msg.store, msg.coll, msg.upserts ?? [], msg.deletes ?? [])
     else if (msg.type === 'presence') useSyncStatus.setState({ online: msg.online ?? [] })
     else if (msg.type === 'reset') {
-      Object.keys(localStorage).filter((k) => k.startsWith('nexus:')).forEach((k) => localStorage.removeItem(k))
+      const scope = getSessionScope()
+      Object.keys(localStorage).filter((k) => k.startsWith('nexus:') && (!scope || k.endsWith(`@${scope}`))).forEach((k) => localStorage.removeItem(k))
       location.reload()
+    } else if (msg.type === 'error') {
+      // e.g. { error: 'PLAN_LIMIT', limit: 'workflows', message } — the server also sends a reverting op
+      eventHandlers.get('server-error')?.forEach((h) => { try { h(msg) } catch (e) { console.error(e) } })
     } else if (msg.type === 'event' || msg.type === 'signal') {
       const key = msg.type === 'signal' ? 'signal' : String(msg.event)
       eventHandlers.get(key)?.forEach((h) => { try { h(msg) } catch (e) { console.error(e) } })
@@ -244,7 +267,8 @@ function pushUserState(name: string, store: AnyStore) {
   fetch('/api/user-state', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user, store: name, data: pick(state, userKeys(name, state)) }),
+    credentials: 'same-origin',
+    body: JSON.stringify({ store: name, data: pick(state, userKeys(name, state)) }),
     keepalive: true,
   }).catch(() => {})
 }
@@ -264,57 +288,88 @@ async function fetchJSON<T>(url: string, init?: RequestInit, timeoutMs = 4000): 
 }
 
 /**
- * Called once before the app renders. Detects the backend; if present, requires login, pulls the
- * shared workspace + this user's state, seeds empty collections, then starts realtime sync.
+ * Called once before the app is even imported (see main.tsx). Detects the backend; if present, resolves the
+ * session (account → current workspace → member id), pulls that workspace's shared data + this member's
+ * state, seeds empty collections, then starts realtime sync.
  */
 export async function initSync(): Promise<void> {
-  let health: { ok: boolean; online: string[]; ai: boolean; model: string }
+  let health: { ok: boolean; ai: boolean; model: string }
   try {
     health = await fetchJSON('/api/health', undefined, 1500)
   } catch {
     useSyncStatus.setState({ mode: 'offline' })
     return
   }
-  useSyncStatus.setState({ aiEnabled: !!health.ai, aiModel: health.model ?? '', online: health.online ?? [] })
+  useSyncStatus.setState({ aiEnabled: !!health.ai, aiModel: health.model ?? '' })
 
-  const user = getSessionUserId()
-  if (!user) {
-    useSyncStatus.setState({ mode: 'server', needsLogin: true })
-    return
-  }
-
-  const boot = await fetchJSON<Boot>(`/api/bootstrap?user=${encodeURIComponent(user)}`, undefined, 15_000).catch(() => null)
-  if (!boot) {
+  let me: Me
+  try {
+    me = await api.me()
+  } catch {
     useSyncStatus.setState({ mode: 'offline' })
     return
   }
+  useWorkspaceStore.getState().setMe(me)
+  if (!me.account) {
+    useSyncStatus.setState({ mode: 'server', needsLogin: true })
+    return
+  }
+  const ws = me.workspaces.find((w) => w.id === me.currentWorkspaceId)
+  if (!ws) {
+    useSyncStatus.setState({ mode: 'server', needsWorkspace: true })
+    return
+  }
+  setSessionIdentity(ws.id, ws.memberId)
+
+  const boot = await fetchJSON<Boot>('/api/bootstrap', { credentials: 'same-origin' }, 15_000).catch((e: Error) => e)
+  if (boot instanceof Error && boot.message === '401') {
+    useSyncStatus.setState({ mode: 'server', needsLogin: true })
+    return
+  }
+  if (boot instanceof Error && boot.message === '409') {
+    useSyncStatus.setState({ mode: 'server', needsWorkspace: true })
+    return
+  }
+  if (boot instanceof Error) {
+    useSyncStatus.setState({ mode: 'offline' })
+    return
+  }
+  // the server is authoritative about who we are in this workspace
+  if (boot.memberId && boot.memberId !== ws.memberId) setSessionIdentity(boot.workspace.id, boot.memberId)
 
   bootCache = boot
-  useSyncStatus.setState({ mode: 'server' })
-  await Promise.all([...stores.entries()].map(([name, store]) => hydrateFromServer(name, store, boot, user)))
+  useSyncStatus.setState({ mode: 'server', online: boot.online ?? [] })
+  const user = getSessionUserId()!
+  for (const [name, store] of stores) hydrateFromServer(name, store, boot, user)
   started = true
   for (const [name, store] of stores) attach(name, store)
   connect()
 }
 
-async function hydrateFromServer(name: string, store: AnyStore, boot: Boot, user: string) {
+/**
+ * Applies the server snapshot to a store. Synchronous on purpose (lazy feature chunks register while
+ * rendering — they must never paint local sample data first). Seeding an empty collection is posted in the
+ * background; if another client won the race, its data replaces ours when the reply arrives.
+ */
+function hydrateFromServer(name: string, store: AnyStore, boot: Boot, user: string) {
   const spec = SYNC_SPEC[name] ?? []
   const state = store.getState() as Record<string, unknown>
   const patch: Record<string, unknown> = {}
+  const toSeed: { coll: string; items: { id: string }[] }[] = []
 
   for (const coll of spec) {
     if (boot.seeded[name]?.includes(coll)) {
       patch[coll] = boot.stores[name]?.[coll] ?? []
     } else {
-      // First client ever: upload this browser's seed so everyone shares the same starting data.
-      const items = ((state[coll] as { id: string }[] | undefined) ?? []).filter((x) => x && typeof x.id === 'string')
-      const res = await fetchJSON<{ seeded: boolean; items?: { id: string }[] }>(
-        '/api/seed',
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ store: name, coll, items }) },
-        15_000,
-      ).catch((): { seeded: boolean; items?: { id: string }[] } => ({ seeded: true }))
-      patch[coll] = res.seeded ? items : (res.items ?? items)
-      ;((boot.stores[name] ??= {})[coll] = patch[coll] as { id: string }[])
+      // First client in this workspace: demo workspaces upload the built-in sample data; real (blank)
+      // workspaces start from the minimal starter content only.
+      const items =
+        boot.workspace.kind === 'demo'
+          ? ((state[coll] as { id: string }[] | undefined) ?? []).filter((x) => x && typeof x.id === 'string')
+          : starterItems(name, coll, { workspaceName: boot.workspace.name, memberId: user })
+      patch[coll] = items
+      toSeed.push({ coll, items })
+      ;((boot.stores[name] ??= {})[coll] = items)
       ;(boot.seeded[name] ??= []).push(coll)
     }
     setSnapshot(name, coll, patch[coll] as { id: string }[])
@@ -323,9 +378,27 @@ async function hydrateFromServer(name: string, store: AnyStore, boot: Boot, user
   const us = boot.userState[name]
   if (us) {
     for (const k of userKeys(name, state)) if (k in us) patch[k] = us[k]
+  } else if (boot.workspace.kind !== 'demo') {
+    Object.assign(patch, STARTER_USER_STATE[name] ?? {})
   }
   if (name === 'core') patch.currentUserId = user
 
   remoteSet(store, patch)
   if (!us) pushUserState(name, store)
+
+  for (const { coll, items } of toSeed) {
+    void fetchJSON<{ seeded: boolean; items?: { id: string }[] }>(
+      '/api/seed',
+      { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ store: name, coll, items }) },
+      15_000,
+    )
+      .then((res) => {
+        if (res.seeded || !res.items) return
+        const theirs = res.items
+        setSnapshot(name, coll, theirs)
+        if (bootCache?.stores[name]) bootCache.stores[name][coll] = theirs
+        remoteSet(store, { [coll]: theirs })
+      })
+      .catch(() => {})
+  }
 }

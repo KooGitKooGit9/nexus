@@ -6,11 +6,13 @@ import { Avatar, Button, Input, Popover } from '@/components/ui'
 import { useCore } from '@/store/core'
 import type { User } from '@/store/types'
 import { ApprovalLine } from '../components/ApprovalLine'
+import { isHuman, joinMeta } from '@/features/people/format'
 
 function UserPicker({ exclude, onPick, trigger }: { exclude: string[]; onPick: (id: string) => void; trigger: React.ReactNode }) {
   const users = useCore((s) => s.users)
   const [q, setQ] = useState('')
-  const list = users.filter((u) => !exclude.includes(u.id) && (!q || u.name.includes(q) || u.title.includes(q) || u.department.includes(q)))
+  const list = users.filter((u) => isHuman(u) && !exclude.includes(u.id) && (!q || u.name.includes(q) || (u.title ?? '').includes(q) || (u.department ?? '').includes(q)))
+  const nobody = !users.some((u) => isHuman(u) && !exclude.includes(u.id))
   return (
     <Popover placement="bottom-start" className="w-72 p-2" trigger={({ toggle }) => <span onClick={toggle}>{trigger}</span>}>
       {(close) => (
@@ -22,11 +24,11 @@ function UserPicker({ exclude, onPick, trigger }: { exclude: string[]; onPick: (
                 <Avatar user={u} size="sm" />
                 <div className="min-w-0">
                   <div className="truncate text-[13px] font-medium text-fg">{u.name}</div>
-                  <div className="truncate text-[11px] text-subtle">{u.title} · {u.department}</div>
+                  <div className="truncate text-[11px] text-subtle">{joinMeta(u.title, u.department) || u.email}</div>
                 </div>
               </button>
             ))}
-            {!list.length && <div className="py-6 text-center text-xs text-subtle">검색 결과가 없어요</div>}
+            {!list.length && <div className="py-6 text-center text-xs text-subtle">{nobody ? '지정할 수 있는 동료가 없어요 — 설정 → 멤버에서 동료를 초대하세요' : '검색 결과가 없어요'}</div>}
           </div>
         </div>
       )}
@@ -54,8 +56,8 @@ function ApproverItem({ id, user, index, total, onMove, onRemove }: { id: string
       <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold', index === total - 1 ? 'bg-accent-gradient text-white shadow-glow-sm' : 'bg-line/10 text-muted')}>{index + 1}</span>
       <Avatar userId={id} size="md" />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[13.5px] font-semibold text-fg">{user?.name}</div>
-        <div className="truncate text-[11.5px] text-subtle">{user?.title} · {user?.department}</div>
+        <div className="truncate text-[13.5px] font-semibold text-fg">{user?.name ?? '나간 멤버'}</div>
+        <div className="truncate text-[11.5px] text-subtle">{joinMeta(user?.title, user?.department)}</div>
       </div>
       <span className={cn('rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold', index === total - 1 ? 'bg-accent/15 text-accent' : 'bg-line/[0.06] text-muted')}>{role}</span>
       <div className="flex items-center">
@@ -137,7 +139,7 @@ export function StepLine({ approverIds, ccIds, defaultLine, onChange, onChangeCc
               {ccIds.map((id) => (
                 <motion.span key={id} layout initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="flex items-center gap-1 rounded-full bg-line/[0.06] py-0.5 pl-0.5 pr-1 text-[12px] text-fg">
                   <Avatar userId={id} size="xs" />
-                  {users.find((u) => u.id === id)?.name}
+                  {users.find((u) => u.id === id)?.name ?? '나간 멤버'}
                   <button type="button" onClick={() => onChangeCc(ccIds.filter((c) => c !== id))} className="rounded-full p-0.5 text-subtle hover:bg-danger/10 hover:text-danger"><X className="h-3 w-3" /></button>
                 </motion.span>
               ))}

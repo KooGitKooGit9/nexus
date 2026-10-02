@@ -13,6 +13,7 @@ import { Celebrations } from './widgets/Celebrations'
 import { FocusTimer } from './widgets/FocusTimer'
 import { QuickNote } from './widgets/QuickNote'
 import { ActivityFeed } from './widgets/ActivityFeed'
+import { GettingStarted } from './components/GettingStarted'
 
 /**
  * Column count follows the *viewport*, but the content area also depends on the sidebar
@@ -27,6 +28,7 @@ export default function HomePage() {
     <Page wide>
       <div className="space-y-6">
         <Hero />
+        <GettingStarted />
         <QuickActions />
 
         <div className="grid grid-flow-row-dense grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">

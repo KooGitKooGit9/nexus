@@ -3,7 +3,7 @@ import { hashIndex } from '@/lib/utils'
 import type { ClockState, LeaveEntry, WorkMode } from './types'
 import { arrivalMinutes, dateKey, defaultWorkMode, hourIn, leaveCovers, LEAVE_LABEL } from './lib'
 
-export type AttendanceStatus = 'working' | 'left' | 'notyet' | 'leave'
+export type AttendanceStatus = 'working' | 'left' | 'notyet' | 'leave' | 'unknown'
 
 export interface AttendanceRow {
   user: User
@@ -27,7 +27,11 @@ const timeOf = (iso: string) => {
   return hm(d.getHours() * 60 + d.getMinutes())
 }
 
-export function teamAttendance(users: User[], leaves: LeaveEntry[], clock: ClockState, meId: string, now: Date): AttendanceRow[] {
+/**
+ * `simulate` (demo workspaces only): teammates get deterministic, plausible check-in times.
+ * Real workspaces never invent attendance — other members' clock records aren't shared, so they show as unknown.
+ */
+export function teamAttendance(users: User[], leaves: LeaveEntry[], clock: ClockState, meId: string, now: Date, simulate = true): AttendanceRow[] {
   const key = dateKey(now)
   return users.map((u): AttendanceRow => {
     const leave = leaves.find((l) => l.userId === u.id && leaveCovers(l, now))
@@ -50,6 +54,8 @@ export function teamAttendance(users: User[], leaves: LeaveEntry[], clock: Clock
         workedMin: worked,
       }
     }
+
+    if (!simulate) return { user: u, mode: 'office', status: 'unknown', workedMin: 0 }
 
     const mode = defaultWorkMode(u)
     let arrival = arrivalMinutes(u.id, key)

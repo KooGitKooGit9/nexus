@@ -110,14 +110,24 @@ export const useDocs = create<DocsState>()(
         }))
       },
 
-      toggleStar: (id) => set((s) => ({ docs: s.docs.map((d) => (d.id === id ? { ...d, starred: !d.starred } : d)) })),
+      toggleStar: (id) => {
+        const me = getCurrentUserId()
+        set((s) => ({
+          docs: s.docs.map((d) => {
+            if (d.id !== id) return d
+            const base = d.starredBy ?? (d.starred ? [me] : [])
+            const starredBy = base.includes(me) ? base.filter((x) => x !== me) : [...base, me]
+            return { ...d, starredBy, starred: undefined }
+          }),
+        }))
+      },
 
       duplicateDoc: (id) => {
         const src = get().docs.find((d) => d.id === id)
         if (!src) return undefined
         const now = new Date().toISOString()
         const me = getCurrentUserId()
-        const copy: Doc = { ...src, id: uid('doc'), title: `${src.title || '제목 없음'} (사본)`, starred: false, authorId: me, lastEditedBy: me, createdAt: now, updatedAt: now }
+        const copy: Doc = { ...src, id: uid('doc'), title: `${src.title || '제목 없음'} (사본)`, starred: undefined, starredBy: [], authorId: me, lastEditedBy: me, createdAt: now, updatedAt: now }
         set((s) => {
           const idx = s.docs.findIndex((d) => d.id === id)
           const docs = [...s.docs]
@@ -139,3 +149,8 @@ export const useDocs = create<DocsState>()(
   ),
 )
 syncAcrossTabs(useDocs)
+
+/** Stars are personal: did `me` star this page? (demo seed docs carry a legacy `starred` flag) */
+export function isDocStarred(d: Pick<Doc, 'starred' | 'starredBy'>, me: string = getCurrentUserId()): boolean {
+  return d.starredBy ? d.starredBy.includes(me) : !!d.starred
+}

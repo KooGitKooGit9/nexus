@@ -7,7 +7,7 @@ import {
 import { cn, timeAgo } from '@/lib/utils'
 import { Avatar, Menu, Popover, Tooltip } from '@/components/ui'
 import { toast, useUser } from '@/store/core'
-import { ancestorsOf, useDocs } from '../store'
+import { ancestorsOf, isDocStarred, useDocs } from '../store'
 import { selectTreeVisible, setTreeVisible, useDocsUI } from '../uiStore'
 import { askAIAboutDoc, copyDocLink, exportMarkdown } from '../hooks'
 import { parseMarkdown, stats } from '../markdown'
@@ -96,9 +96,9 @@ export function DocHeader({ doc, coEditors }: { doc: Doc; coEditors: RemoteCurso
       )}
 
       <div className="flex shrink-0 items-center gap-0.5">
-        <Tooltip content={doc.starred ? '즐겨찾기 해제' : '즐겨찾기'} side="bottom">
+        <Tooltip content={isDocStarred(doc) ? '즐겨찾기 해제' : '즐겨찾기'} side="bottom">
           <button onClick={() => toggleStar(doc.id)} className="rounded-lg p-1.5 text-subtle transition hover:bg-line/10 hover:text-fg">
-            <Star className={cn('h-4 w-4 transition', doc.starred && 'fill-amber-400 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]')} />
+            <Star className={cn('h-4 w-4 transition', isDocStarred(doc) && 'fill-amber-400 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]')} />
           </button>
         </Tooltip>
 

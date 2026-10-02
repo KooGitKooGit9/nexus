@@ -7,6 +7,7 @@ import { notifyMembers } from '@/app/notifyMembers'
 import { particle } from './meta'
 import { seedApprovals } from './seed'
 import type { ApprovalRequest } from './types'
+import { isDemoWorkspace } from '@/lib/workspace'
 
 export type NewRequestInput = Omit<ApprovalRequest, 'id' | 'createdAt' | 'status' | 'steps' | 'docNo' | 'requesterId'> & {
   approverIds: string[]
@@ -77,7 +78,15 @@ export const useApprovals = create<ApprovalsState>()(
       createRequest: ({ approverIds, ...input }) => {
         const me = getCurrentUserId()
         const id = uid('apv')
-        const docNo = `AUR-${new Date().getFullYear()}-${get().nextDocNo}`
+        // numbers come from the shared document list (a per-member counter would hand out duplicates)
+        const year = new Date().getFullYear()
+        const prefix = isDemoWorkspace() ? 'AUR' : 'DOC'
+        const used = get().requests
+          .map((r) => r.docNo?.match(new RegExp(`^${prefix}-${year}-(\\d+)$`))?.[1])
+          .filter((x): x is string => !!x)
+          .map(Number)
+        const n = Math.max(isDemoWorkspace() ? get().nextDocNo - 1 : 1000, ...used) + 1
+        const docNo = `${prefix}-${year}-${n}`
         const req: ApprovalRequest = {
           ...input,
           id,
@@ -87,7 +96,7 @@ export const useApprovals = create<ApprovalsState>()(
           status: 'pending',
           steps: approverIds.map((a, i) => ({ approverId: a, status: i === 0 ? 'pending' : 'waiting' })),
         }
-        set((s) => ({ requests: [req, ...s.requests], nextDocNo: s.nextDocNo + 1 }))
+        set((s) => ({ requests: [req, ...s.requests], nextDocNo: Math.max(s.nextDocNo, n) + 1 }))
 
         const first = approverIds[0]
         notifyMembers([first], {
@@ -105,11 +114,12 @@ export const useApprovals = create<ApprovalsState>()(
 
         // Demo liveliness: a *simulated* first approver reacts a few seconds later — never when that
         // person is a real member who is online right now (they decide themselves).
-        if (first && first !== me && !isUserOnline(first)) {
+        // Real workspaces: never — a real colleague's approval must come from that colleague.
+        if (isDemoWorkspace() && first && first !== me && !isUserOnline(first)) {
           autoTimers.set(id, setTimeout(() => {
             autoTimers.delete(id)
             const cur = get().requests.find((r) => r.id === id)
-            if (!cur || cur.status !== 'pending' || cur.steps[0]?.status !== 'pending' || isUserOnline(first)) return
+            if (!isDemoWorkspace() || !cur || cur.status !== 'pending' || cur.steps[0]?.status !== 'pending' || isUserOnline(first)) return
             set((s) => ({
               requests: s.requests.map((r) => {
                 if (r.id !== id) return r

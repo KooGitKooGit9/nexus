@@ -12,6 +12,7 @@ import type { FlowNode, Workflow } from '../types'
 import { MiniFlow, RunSparkline, RunStatusDot } from './bits'
 import { describeCron, getDef } from '../catalog'
 import { particle } from '@/features/approvals/meta'
+import { blockIfWorkflowLimit } from '../limits'
 
 export function WorkflowCard({ wf, index }: { wf: Workflow; index: number }) {
   const navigate = useNavigate()
@@ -74,7 +75,7 @@ export function WorkflowCard({ wf, index }: { wf: Workflow; index: number }) {
                 items={[
                   { label: '편집', icon: <Pencil />, onClick: () => navigate(`/workflows/${wf.id}`) },
                   { label: '테스트 실행', icon: <Play />, onClick: () => navigate(`/workflows/${wf.id}?run=1`) },
-                  { label: '복제', icon: <Copy />, onClick: () => { duplicate(wf.id); toast('워크플로우를 복제했어요', { emoji: '📋', variant: 'success', description: `"${wf.name} (사본)" · 비활성 상태로 만들어졌어요` }) } },
+                  { label: '복제', icon: <Copy />, onClick: () => { if (blockIfWorkflowLimit()) return; duplicate(wf.id); toast('워크플로우를 복제했어요', { emoji: '📋', variant: 'success', description: `"${wf.name} (사본)" · 비활성 상태로 만들어졌어요` }) } },
                   { divider: true, label: '' },
                   { label: '삭제', icon: <Trash2 />, danger: true, onClick: () => setConfirmDelete(true) },
                 ]}

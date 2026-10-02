@@ -288,7 +288,7 @@ function PRCard({ card }: { card: Extract<BotCard, { card: 'pr' }> }) {
         <Badge tone={merged ? 'accent' : card.status === 'review' ? 'warning' : 'success'}>{merged ? 'Merged' : card.status === 'review' ? '리뷰 대기' : 'Open'}</Badge>
       </div>
       <div className="mt-3 flex items-center justify-between border-t border-line/[0.07] pt-2.5">
-        <span className="flex items-center gap-1.5 text-[12px] text-muted">{author && <Avatar user={author} size="xs" />}{author?.name}</span>
+        <span className="flex items-center gap-1.5 text-[12px] text-muted">{author && <Avatar user={author} size="xs" />}{author?.name ?? '나간 멤버'}</span>
         {!merged && (
           <button onClick={() => toast('리뷰어로 등록되었습니다', { emoji: '👀', description: `${card.repo}#${card.number}` })} className="flex items-center gap-1 rounded-lg border border-line/15 px-2.5 py-1 text-[12px] font-medium transition hover:border-accent/50 hover:text-accent">
             리뷰하기 <ExternalLink className="h-3 w-3" />
@@ -353,7 +353,7 @@ export function SystemLine({ message }: { message: Message }) {
   const u = getUser(message.userId)
   return (
     <span className="text-[13px] text-muted">
-      <span className="font-medium text-fg/80">{u?.name}</span>님이 {message.text}
+      <span className="font-medium text-fg/80">{u?.name ?? '나간 멤버'}</span>님이 {message.text}
     </span>
   )
 }

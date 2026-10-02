@@ -8,6 +8,7 @@ import { useMessenger } from '@/features/messenger/store'
 import { useProjects } from '@/features/projects/store'
 import { CHANNELS, OP_OPTIONS, describeCron, isValidCron, type FieldDef } from '../catalog'
 import type { ConditionRule } from '../types'
+import { joinMeta, isHuman } from '@/features/people/format'
 
 const CRON_PRESETS = [
   { label: '평일 09:00', value: '0 9 * * 1-5' },
@@ -148,7 +149,7 @@ export function FieldInput({ field, value, onChange, variables }: { field: Field
         <Select value={str} onChange={(e) => onChange(e.target.value)} className="h-9 py-0">
           <option value="">👤 워크플로우 소유자</option>
           <option value="$actor">⚡ 이벤트를 일으킨 사람</option>
-          {users.map((u) => <option key={u.id} value={u.id}>{u.name} · {u.title}</option>)}
+          {users.filter(isHuman).map((u) => <option key={u.id} value={u.id}>{joinMeta(u.name, u.title)}</option>)}
         </Select>
       )
     case 'project': {

@@ -39,11 +39,11 @@ export function NotificationSettings() {
     }
   }
 
-  const channels: { key: keyof NotifChannels; label: string; description: string; icon: React.ReactNode }[] = [
+  const channels: { key: keyof NotifChannels; label: string; description: string; icon: React.ReactNode; soon?: boolean }[] = [
     { key: 'desktop', label: '데스크톱 알림', description: '브라우저가 백그라운드일 때도 알려드려요', icon: <Monitor /> },
-    { key: 'mobilePush', label: '모바일 푸시', description: 'Nexus iOS / Android 앱으로 전송', icon: <Smartphone /> },
-    { key: 'email', label: '이메일', description: '놓친 멘션과 결재 요청을 메일로 받아요', icon: <Mail /> },
-    { key: 'sound', label: '알림음', description: '새 알림이 오면 소리로 알려드려요', icon: <Volume2 /> },
+    { key: 'sound', label: '알림음', description: '새 알림이 오면 소리로 알려드려요', icon: <Volume2 />, soon: true },
+    { key: 'email', label: '이메일', description: '놓친 멘션과 결재 요청을 메일로 받아요', icon: <Mail />, soon: true },
+    { key: 'mobilePush', label: '모바일 푸시', description: '모바일 앱으로 알림을 받아요', icon: <Smartphone />, soon: true },
   ]
 
   return (
@@ -98,15 +98,17 @@ export function NotificationSettings() {
 
       <SettingsSection title="전달 방식" icon={<Send />} delay={0.1}>
         {channels.map((c) => (
-          <SettingRow key={c.key} label={c.label} description={c.description} icon={c.icon}>
-            <Switch checked={s.channels[c.key]} onChange={(v) => s.setChannel(c.key, v)} />
+          <SettingRow key={c.key} label={c.soon ? <span className="flex items-center gap-2">{c.label}<Badge>곧 제공</Badge></span> : c.label} description={c.description} icon={c.icon}>
+            {c.soon ? (
+              <span aria-hidden className="inline-flex h-6 w-11 items-center rounded-full bg-line/15 p-0.5 opacity-50"><span className="h-5 w-5 rounded-full bg-white shadow" /></span>
+            ) : (
+              <Switch checked={s.channels[c.key]} onChange={(v) => s.setChannel(c.key, v)} />
+            )}
           </SettingRow>
         ))}
-        <SettingRow label="요약 메일" description="읽지 않은 활동을 모아서 보내드려요" icon={<Mail />}>
-          <Select value={s.digest} onChange={(e) => s.setDigest(e.target.value as typeof s.digest)} className="h-9 w-32 py-1.5">
+        <SettingRow label={<span className="flex items-center gap-2">요약 메일<Badge>곧 제공</Badge></span>} description="읽지 않은 활동을 모아서 보내드려요" icon={<Mail />}>
+          <Select value="off" disabled onChange={() => undefined} className="h-9 w-32 py-1.5 opacity-50">
             <option value="off">받지 않음</option>
-            <option value="daily">매일 오전 9시</option>
-            <option value="weekly">매주 월요일</option>
           </Select>
         </SettingRow>
       </SettingsSection>

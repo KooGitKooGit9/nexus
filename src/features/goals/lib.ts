@@ -64,6 +64,12 @@ export function quarterOf(date = new Date()): string {
   return `${date.getFullYear()} Q${Math.floor(date.getMonth() / 3) + 1}`
 }
 
+/** Previous / current / next quarter relative to today, plus any quarter that already has objectives. */
+export function quarterOptions(objectives: { quarter: string }[], now = new Date()): string[] {
+  const shift = (months: number) => quarterOf(new Date(now.getFullYear(), now.getMonth() + months, 1))
+  return Array.from(new Set([shift(-3), shift(0), shift(3), ...objectives.map((o) => o.quarter)])).sort()
+}
+
 export function burstConfetti(origin?: { x: number; y: number }) {
   const colors = ['#8b5cf6', '#22d3ee', '#f472b6', '#34d399', '#fbbf24']
   confetti({ particleCount: 90, spread: 75, startVelocity: 38, origin: origin ?? { x: 0.5, y: 0.6 }, colors, zIndex: 9999, scalar: 0.9 })

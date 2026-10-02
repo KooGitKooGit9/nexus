@@ -1,9 +1,12 @@
+import { getSessionScope } from '@/lib/session'
 import { useEffect, useMemo, useState } from 'react'
-import { Database, Download, AlertTriangle, RotateCcw, FileJson, History, Trash2, Server, Users } from 'lucide-react'
+import { Database, Download, AlertTriangle, RotateCcw, FileJson, History, Trash2, Server } from 'lucide-react'
 import { getCurrentUserId, toast } from '@/store/core'
-import { STORAGE_PREFIX, resetWorkspace } from '@/lib/persist'
+import { STORAGE_PREFIX } from '@/lib/persist'
+import { currentWorkspace } from '@/lib/workspace'
+import { useNavigate } from 'react-router-dom'
 import { useSyncStatus } from '@/lib/sync'
-import { Badge, Button, Modal } from '@/components/ui'
+import { Badge, Button } from '@/components/ui'
 import { formatBytes, formatDate } from '@/lib/utils'
 import { useSettings } from '../store'
 import { SettingsSection, SettingRow } from '../components/Section'
@@ -29,7 +32,7 @@ function readKeys() {
 type Bootstrap = { stores: Record<string, Record<string, unknown[]>>; userState: Record<string, unknown>; online?: string[] }
 
 const fetchBootstrap = async (): Promise<Bootstrap> => {
-  const r = await fetch(`/api/bootstrap?user=${encodeURIComponent(getCurrentUserId())}`)
+  const r = await fetch('/api/bootstrap', { credentials: 'same-origin' })
   if (!r.ok) throw new Error(String(r.status))
   return (await r.json()) as Bootstrap
 }
@@ -65,7 +68,6 @@ function download(payload: unknown, prefix: string) {
 export function DataSettings() {
   const [tick, setTick] = useState(0)
   const serverMode = useSyncStatus((s) => s.mode === 'server')
-  const onlineCount = useSyncStatus((s) => s.online.length)
   const [boot, setBoot] = useState<Bootstrap | null>(null)
   const [bootError, setBootError] = useState(false)
   useEffect(() => {
@@ -78,8 +80,7 @@ export function DataSettings() {
   const keys: { key: string; name: string; bytes: number; items?: number }[] = serverMode && boot ? serverKeys(boot) : localKeys
   const total = keys.reduce((s, k) => s + k.bytes, 0)
   const log = useSettings((s) => s.log)
-  const [confirm, setConfirm] = useState(false)
-  const [typed, setTyped] = useState('')
+  const navigate = useNavigate()
   const [exporting, setExporting] = useState(false)
 
   const exportAll = async () => {
@@ -88,7 +89,7 @@ export function DataSettings() {
       try {
         const b = await fetchBootstrap()
         const size = download(
-          { app: 'Nexus', workspace: 'Aurora Labs', source: 'server', exportedAt: new Date().toISOString(), exportedBy: getCurrentUserId(), version: 2, shared: b.stores, myState: b.userState },
+          { app: 'Nexus', workspace: currentWorkspace().name, source: 'server', exportedAt: new Date().toISOString(), exportedBy: getCurrentUserId(), version: 2, shared: b.stores, myState: b.userState },
           'nexus-workspace',
         )
         const n = Object.keys(b.stores ?? {}).length
@@ -111,14 +112,17 @@ export function DataSettings() {
       const raw = localStorage.getItem(k.key)
       try { data[k.key] = raw ? JSON.parse(raw) : null } catch { data[k.key] = raw }
     }
-    const size = download({ app: 'Nexus', workspace: 'Aurora Labs', source: 'browser', exportedAt: new Date().toISOString(), version: 1, data }, 'nexus-workspace')
+    const size = download({ app: 'Nexus', workspace: currentWorkspace().name, source: 'browser', exportedAt: new Date().toISOString(), version: 1, data }, 'nexus-workspace')
     log('data', '워크스페이스 내보내기', `${localKeys.length}개 저장소 · ${formatBytes(size)}`)
     setTick((t) => t + 1)
     toast('워크스페이스 데이터를 내보냈어요', { variant: 'success', description: `${localKeys.length}개 저장소 · ${formatBytes(size)}`, emoji: '📦' })
   }
 
   const clearRecent = () => {
-    try { localStorage.removeItem(`${STORAGE_PREFIX}palette-recent`) } catch { /* ignore */ }
+    try {
+      const scope = getSessionScope()
+      localStorage.removeItem(`${STORAGE_PREFIX}palette-recent${scope ? `@${scope}` : ''}`)
+    } catch { /* ignore */ }
     setTick((t) => t + 1)
     toast('최근 검색 기록을 지웠어요', { emoji: '🧹' })
   }
@@ -167,56 +171,11 @@ export function DataSettings() {
         </SettingRow>
       </SettingsSection>
 
-      {/* danger zone */}
-      <section className="relative overflow-hidden rounded-3xl border border-danger/30 bg-danger/[0.04] p-6">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-danger/15 blur-3xl" />
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-danger/15 text-danger"><AlertTriangle className="h-5 w-5" /></div>
-            <div>
-              <h2 className="text-[15px] font-semibold text-danger">위험 구역</h2>
-              <div className="mt-2 text-[13.5px] font-medium">워크스페이스 초기화</div>
-              <p className="mt-0.5 max-w-lg text-[12.5px] text-muted">
-                {serverMode ? (
-                  <>
-                    <b className="text-danger">모든 구성원에게 적용돼요.</b> 서버에 저장된 메시지, 태스크, 문서, 일정, 결재, 파일 목록과 모든 사람의 개인 설정을 삭제하고 처음 데모 상태로 되돌려요.
-                    {onlineCount > 1 && <> 지금 접속 중인 {onlineCount - 1}명의 화면도 즉시 새로고침돼요.</>} 이 작업은 되돌릴 수 없어요.
-                  </>
-                ) : (
-                  '메시지, 태스크, 문서, 일정, 설정 등 이 브라우저에 저장된 모든 Nexus 데이터를 삭제하고 처음 데모 상태로 되돌려요. 이 작업은 되돌릴 수 없어요.'
-                )}
-              </p>
-            </div>
-          </div>
-          <Button variant="danger" leftIcon={<RotateCcw className="h-4 w-4" />} onClick={() => setConfirm(true)}>워크스페이스 초기화</Button>
-        </div>
-      </section>
-
-      <Modal
-        open={confirm}
-        onClose={() => { setConfirm(false); setTyped('') }}
-        size="sm"
-        title={<span className="flex items-center gap-2 text-danger"><AlertTriangle className="h-5 w-5" />정말 초기화할까요?</span>}
-        description={serverMode ? '서버의 워크스페이스 전체가 초기화되고 모든 구성원의 화면이 새로고침됩니다.' : '모든 로컬 데이터가 삭제되고 페이지가 새로고침됩니다.'}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => { setConfirm(false); setTyped('') }}>취소</Button>
-            <Button variant="danger" disabled={typed !== '초기화'} onClick={() => resetWorkspace()}>영구적으로 초기화</Button>
-          </>
-        }
-      >
-        <div className="space-y-3">
-          <div className="rounded-xl border border-danger/20 bg-danger/[0.06] p-3 text-[12.5px] text-fg/85">
-            삭제 대상: <b>{serverMode ? '서버 공유 데이터 · ' : ''}{keys.length}개 저장소</b> · {formatBytes(total)}
-            {serverMode && <><br /><span className="inline-flex items-center gap-1"><Users className="h-3 w-3" /> 모든 구성원의 데이터가 함께 삭제돼요.</span></>}
-            <br />먼저 <button className="font-medium text-accent hover:underline" onClick={() => void exportAll()}>JSON으로 백업</button>해 두는 걸 권장해요.
-          </div>
-          <label className="block text-[12.5px] text-muted">
-            확인을 위해 <b className="text-fg">초기화</b>를 입력하세요
-            <input autoFocus value={typed} onChange={(e) => setTyped(e.target.value)} className="input-base mt-1.5" placeholder="초기화" />
-          </label>
-        </div>
-      </Modal>
+      <SettingsSection title="초기화 · 삭제" icon={<AlertTriangle />} delay={0.1}>
+        <SettingRow label="데모 초기화 · 워크스페이스 삭제" description="워크스페이스 탭의 위험 구역에서 할 수 있어요. 먼저 위에서 JSON으로 백업해 두세요." icon={<RotateCcw />}>
+          <Button size="sm" variant="outline" onClick={() => navigate('/settings/workspace')}>워크스페이스 탭으로</Button>
+        </SettingRow>
+      </SettingsSection>
     </>
   )
 }

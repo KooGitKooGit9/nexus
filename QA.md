@@ -17,3 +17,8 @@ The user's machine ran out of memory (80GB swap) when 8 agents each drove browse
 - Bugs found → fix (file) table
 - Anything needing a change outside your dirs (exact file + diff)
 - Things the orchestrator should verify visually in the browser (specific routes/steps)
+
+## Local test accounts (dev DB only — `server/data`, never production)
+Created by the orchestrator during browser QA on localhost:
+- owner: `qa-owner@example.test` / `nexus-qa-Owner1!` (workspace "QA 팀")
+- member: `qa-member@example.test` / `nexus-qa-Member1!`

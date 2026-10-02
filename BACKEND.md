@@ -1,3 +1,5 @@
+> ⚠️ Superseded by LAUNCH.md (round 4: multi-tenant SaaS). Kept for history.
+
 # Nexus — Backend & "make it real" brief (round 3)
 
 The user wants **no more fake features**: everything that looks like it works must actually work. Nexus now has a real backend. Read this + `AGENTS.md` (conventions) + `QA.md` (LOW-RESOURCE rules still apply: no browser tools, no tsc/vite/npm, no servers — the orchestrator verifies).

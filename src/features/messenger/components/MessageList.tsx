@@ -8,6 +8,7 @@ import { useMessenger } from '../store'
 import { channelTitle, isDirect, otherMembers, useChatUI, useTyping } from '../lib'
 import { MessageItem } from './MessageItem'
 import type { Channel, Message } from '../types'
+import { joinMeta } from '@/features/people/format'
 
 const GROUP_GAP_MS = 5 * 60_000
 
@@ -215,7 +216,7 @@ function ChannelIntro({ channel, onAddMembers, onEditTopic }: { channel: Channel
         <p className="mt-1 max-w-xl text-[14px] text-muted">
           {channel.kind === 'dm' ? (
             <>
-              <b className="text-fg">{first?.name}</b>님과의 다이렉트 메시지의 시작입니다. {first?.title} · {first?.location}
+              <b className="text-fg">{first?.name}</b>님과의 다이렉트 메시지의 시작입니다. {joinMeta(first?.title, first?.location)}
             </>
           ) : (
             <>이 그룹 대화의 시작입니다. {others.length + 1}명이 참여하고 있어요.</>

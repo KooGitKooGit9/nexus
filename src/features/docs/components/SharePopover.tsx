@@ -7,10 +7,13 @@ import { notifyMembers } from '@/app/notifyMembers'
 import { useDocs } from '../store'
 import { PERMISSION_LABEL } from '../constants'
 import type { Doc, DocPermission } from '../types'
+import { isHuman } from '@/features/people/format'
+import { isDemoWorkspace, useWorkspace } from '@/lib/workspace'
 
 const DEFAULT_MEMBERS = ['u_pm', 'u_design', 'u_fe', 'u_cto']
 
 export function SharePopover({ doc }: { doc: Doc }) {
+  const workspaceName = useWorkspace().name
   const users = useCore((s) => s.users)
   const me = useCore((s) => s.currentUserId)
   const updateDoc = useDocs((s) => s.updateDoc)
@@ -20,14 +23,15 @@ export function SharePopover({ doc }: { doc: Doc }) {
   const perms: Record<string, DocPermission> = useMemo(() => {
     if (doc.permissions) return doc.permissions
     const base: Record<string, DocPermission> = {}
-    DEFAULT_MEMBERS.forEach((id) => { if (id !== doc.authorId) base[id] = 'edit' })
+    // demo docs without explicit permissions show the demo team; real workspaces start with just the author
+    if (isDemoWorkspace()) DEFAULT_MEMBERS.forEach((id) => { if (id !== doc.authorId) base[id] = 'edit' })
     return base
   }, [doc.permissions, doc.authorId])
 
   const owner = doc.authorId
   const memberIds = [owner, ...Object.keys(perms).filter((id) => id !== owner)]
   const candidates = q.trim()
-    ? users.filter((u) => !memberIds.includes(u.id) && (u.name.includes(q.trim()) || u.nameEn.toLowerCase().includes(q.trim().toLowerCase()) || u.email.includes(q.trim())))
+    ? users.filter((u) => isHuman(u) && !memberIds.includes(u.id) && (u.name.includes(q.trim()) || u.nameEn.toLowerCase().includes(q.trim().toLowerCase()) || u.email.includes(q.trim())))
     : []
 
   const setPerm = (uid: string, p: DocPermission | null) => {
@@ -82,7 +86,7 @@ export function SharePopover({ doc }: { doc: Doc }) {
                 className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-accent/10"
               >
                 <Avatar userId={u.id} size="xs" />
-                <span className="flex-1 truncate text-[13px]">{u.name} <span className="text-subtle">· {u.title}</span></span>
+                <span className="flex-1 truncate text-[13px]">{u.name}{u.title ? <span className="text-subtle"> · {u.title}</span> : null}</span>
                 <span className="text-[11px] text-accent">초대</span>
               </button>
             ))}
@@ -129,7 +133,7 @@ export function SharePopover({ doc }: { doc: Doc }) {
           {doc.linkShared ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-medium">{doc.linkShared ? '오로라랩스 전체' : '초대된 사람만'}</div>
+          <div className="text-[13px] font-medium">{doc.linkShared ? `${workspaceName} 전체` : '초대된 사람만'}</div>
           <div className="text-[11px] text-subtle">{doc.linkShared ? '링크가 있는 구성원은 누구나 볼 수 있어요' : '초대된 구성원만 접근할 수 있어요'}</div>
         </div>
         <Switch size="sm" checked={!!doc.linkShared} onChange={(v) => updateDoc(doc.id, { linkShared: v }, { touch: false })} />

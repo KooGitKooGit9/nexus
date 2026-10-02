@@ -5,12 +5,14 @@ import { ArrowRight, Clock, FilePlus, LayoutTemplate, PanelLeft, Plus, Sparkles,
 import { cn, timeAgo } from '@/lib/utils'
 import { Avatar, Button, EmptyState, FadeIn } from '@/components/ui'
 import { useCurrentUser } from '@/store/core'
-import { useDocs } from '../store'
+import { isDocStarred, useDocs } from '../store'
 import { selectTreeVisible, setTreeVisible, useDocsUI } from '../uiStore'
 import { useCreateDoc } from '../hooks'
 import { excerpt } from '../markdown'
 import { TEMPLATES } from '../templates'
 import type { Doc } from '../types'
+import { useWorkspace } from '@/lib/workspace'
+import { givenName } from '@/features/people/format'
 
 function greeting() {
   const h = new Date().getHours()
@@ -32,7 +34,7 @@ function DocCard({ doc, i }: { doc: Doc; i: number }) {
     >
       <div className="relative h-[72px] overflow-hidden" style={{ background: doc.cover ?? 'rgb(var(--surface-3))' }}>
         <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-110" style={{ background: doc.cover ?? undefined }} />
-        {doc.starred && <Star className="absolute right-2.5 top-2.5 h-3.5 w-3.5 fill-amber-300 text-amber-300 drop-shadow" />}
+        {isDocStarred(doc) && <Star className="absolute right-2.5 top-2.5 h-3.5 w-3.5 fill-amber-300 text-amber-300 drop-shadow" />}
       </div>
       <div className="relative flex flex-1 flex-col px-4 pb-4">
         <span className="-mt-5 mb-1.5 text-[34px] leading-none drop-shadow-[0_4px_12px_rgba(0,0,0,0.35)]">{doc.emoji || '📄'}</span>
@@ -48,6 +50,7 @@ function DocCard({ doc, i }: { doc: Doc; i: number }) {
 }
 
 export function DocsHome() {
+  const workspaceName = useWorkspace().name
   const navigate = useNavigate()
   const me = useCurrentUser()
   const docs = useDocs((s) => s.docs)
@@ -57,7 +60,7 @@ export function DocsHome() {
   const createDoc = useCreateDoc()
 
   const recent = useMemo(() => recentIds.map((id) => docs.find((d) => d.id === id)).filter((d): d is Doc => !!d).slice(0, 8), [recentIds, docs])
-  const starred = useMemo(() => docs.filter((d) => d.starred), [docs])
+  const starred = useMemo(() => docs.filter((d) => isDocStarred(d)), [docs])
   const updated = useMemo(() => [...docs].sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt)).slice(0, 6), [docs])
   const weekCount = docs.filter((d) => Date.now() - +new Date(d.updatedAt) < 7 * 864e5).length
 
@@ -77,10 +80,10 @@ export function DocsHome() {
             <div className="absolute -right-10 -top-16 text-[220px] leading-none opacity-[0.12] blur-[1px] select-none">📚</div>
             <div className="relative">
               <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur">
-                <Sparkles className="h-3 w-3" /> 오로라랩스 지식 베이스
+                <Sparkles className="h-3 w-3" /> {workspaceName} 지식 베이스
               </div>
               <h1 className="font-display text-3xl font-bold tracking-tight text-white md:text-[40px] md:leading-[1.1]">
-                {greeting()}, {me?.name.slice(1)}님 👋
+                {greeting()}{givenName(me?.name) ? `, ${givenName(me?.name)}님` : ''} 👋
               </h1>
               <p className="mt-2 max-w-lg text-[15px] text-white/75">팀의 지식과 결정을 한곳에 모으세요. 블록 에디터, 템플릿, AI 도우미가 함께합니다.</p>
               <div className="mt-6 flex flex-wrap items-center gap-2">
@@ -115,7 +118,16 @@ export function DocsHome() {
               {recent.map((d, i) => <DocCard key={d.id} doc={d} i={i} />)}
             </div>
           ) : (
-            <EmptyState icon={<Clock />} title="최근 방문한 페이지가 없어요" description="페이지를 열면 이곳에 표시됩니다." />
+            docs.length === 0 ? (
+              <EmptyState
+                icon={<FilePlus />}
+                title="첫 페이지를 만들어 보세요"
+                description="회의록, 온보딩 가이드, 제품 요구사항… 팀의 지식을 한곳에 모아요."
+                action={<Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => openTemplates(null)}>템플릿으로 시작하기</Button>}
+              />
+            ) : (
+              <EmptyState icon={<Clock />} title="최근 방문한 페이지가 없어요" description="페이지를 열면 이곳에 표시됩니다." />
+            )
           )}
         </section>
 
@@ -168,6 +180,7 @@ export function DocsHome() {
           <section>
             <h2 className="mb-3.5 flex items-center gap-2 text-[13px] font-semibold text-muted"><TrendingUp className="h-4 w-4" /> 최근 업데이트</h2>
             <div className="glass rounded-2xl p-2">
+              {updated.length === 0 && <div className="px-3 py-8 text-center text-sm text-subtle">팀원이 페이지를 편집하면 여기에 표시돼요 ✍️</div>}
               {updated.map((d) => (
                 <button key={d.id} onClick={() => navigate(`/docs/${d.id}`)} className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-line/[0.05]">
                   <Avatar userId={d.lastEditedBy} size="sm" />

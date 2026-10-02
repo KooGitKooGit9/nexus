@@ -17,6 +17,8 @@ export interface RemoteCursor {
   id: string
   name: string
   color: string
+  /** a real, connected member (vs. a simulated demo co-editor) */
+  live?: boolean
 }
 
 export interface BlockHandlers {

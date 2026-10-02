@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import { Menu, Tooltip } from '@/components/ui'
 import { toast } from '@/store/core'
 import type { Doc } from '../types'
-import { useDocs } from '../store'
+import { isDocStarred, useDocs } from '../store'
 import { closeOverlayTree, useDocsUI } from '../uiStore'
 import { copyDocLink, useCreateDoc } from '../hooks'
 
@@ -61,7 +61,7 @@ export function TreeItem({ doc, depth, activeId, childrenMap, flat }: Props) {
               </button>
             }
             items={[
-              { label: doc.starred ? '즐겨찾기 해제' : '즐겨찾기에 추가', icon: doc.starred ? <StarOff /> : <Star />, onClick: () => toggleStar(doc.id) },
+              { label: isDocStarred(doc) ? '즐겨찾기 해제' : '즐겨찾기에 추가', icon: isDocStarred(doc) ? <StarOff /> : <Star />, onClick: () => toggleStar(doc.id) },
               { label: '링크 복사', icon: <Link2 />, onClick: () => copyDocLink(doc.id) },
               {
                 label: '복제',

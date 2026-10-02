@@ -129,7 +129,7 @@ export function Topbar() {
                 { icon: <UserRound />, label: '내 프로필', onClick: () => navigate(`/people/${me.id}`) },
                 { icon: <SettingsIcon />, label: '설정', onClick: () => navigate('/settings') },
                 { icon: <Keyboard />, label: '키보드 단축키', onClick: () => setShortcutsOpen(true) },
-                { icon: <LogOut />, label: '로그아웃', onClick: () => { clearSession(); location.reload() } },
+                { icon: <LogOut />, label: '로그아웃', onClick: () => void clearSession() },
               ].map((it) => (
                 <button key={it.label} onClick={() => { it.onClick(); close() }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] hover:bg-line/[0.07] [&>svg]:h-4 [&>svg]:w-4 [&>svg]:text-muted">
                   {it.icon}{it.label}

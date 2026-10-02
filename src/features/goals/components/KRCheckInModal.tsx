@@ -103,7 +103,7 @@ export function KRCheckInModal({ objectiveId, krId, onClose }: { objectiveId: st
             <div className="font-semibold text-fg">{kr!.title}</div>
             <div className="mt-1 flex items-center gap-2 text-xs text-muted">
               <Avatar userId={kr!.ownerId} size="xs" />
-              {users.find((u) => u.id === kr!.ownerId)?.name}
+              {users.find((u) => u.id === kr!.ownerId)?.name ?? '나간 멤버'}
               <span className="text-subtle">·</span>
               시작 {formatNum(start)}{kr!.unit} → 목표 {formatNum(kr!.target)}{kr!.unit}
             </div>

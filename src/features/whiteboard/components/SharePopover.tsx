@@ -5,14 +5,17 @@ import { getCurrentUserId, getUser, toast, useCore } from '@/store/core'
 import { notifyMembers } from '@/app/notifyMembers'
 import type { Board } from '../types'
 import { useWhiteboard } from '../store'
+import { isHuman } from '@/features/people/format'
+import { useWorkspace } from '@/lib/workspace'
 
 export function SharePopover({ board }: { board: Board }) {
+  const workspaceName = useWorkspace().name
   const users = useCore((s) => s.users)
   const updateBoard = useWhiteboard((s) => s.updateBoard)
   const [copied, setCopied] = useState(false)
   const [picking, setPicking] = useState(false)
   const members = board.memberIds.map((id) => users.find((u) => u.id === id)).filter(Boolean) as typeof users
-  const others = users.filter((u) => !board.memberIds.includes(u.id))
+  const others = users.filter((u) => isHuman(u) && !board.memberIds.includes(u.id))
 
   const copy = () => {
     navigator.clipboard?.writeText(window.location.href).catch(() => {})
@@ -31,7 +34,7 @@ export function SharePopover({ board }: { board: Board }) {
     >
       <div className="p-4">
         <div className="text-sm font-semibold text-fg">보드 공유</div>
-        <p className="mt-0.5 text-xs text-muted">링크가 있는 오로라랩스 구성원은 누구나 볼 수 있어요.</p>
+        <p className="mt-0.5 text-xs text-muted">링크가 있는 {workspaceName} 구성원은 누구나 볼 수 있어요.</p>
         <button onClick={copy} className="mt-3 flex w-full items-center gap-2 rounded-xl border border-line/10 bg-line/[0.04] px-3 py-2 text-left text-xs text-muted transition hover:border-accent/40">
           {copied ? <Check className="h-4 w-4 text-success" /> : <Link2 className="h-4 w-4" />}
           <span className="flex-1 truncate font-mono">{window.location.host}/whiteboard/{board.id}</span>

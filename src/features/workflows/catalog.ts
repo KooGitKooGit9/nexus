@@ -132,7 +132,7 @@ export const NODE_DEFS: NodeDef[] = [
     summary: (c) => describeCron(s(c.cron, '0 9 * * 1-5')),
   },
   {
-    kind: 'webhook', category: 'trigger', label: '웹훅', description: '외부 서비스가 URL을 호출하면 (데모: 지금 실행으로 페이로드 입력)',
+    kind: 'webhook', category: 'trigger', label: '웹훅', description: '외부 서비스가 URL을 호출하면 (외부 수신은 곧 제공 · 지금은 \'지금 실행\'으로 페이로드 입력)',
     icon: Webhook, color: '#a78bfa', gradient: 'from-slate-500 to-zinc-700',
     fields: [
       { key: 'path', label: '엔드포인트 경로', type: 'text', placeholder: '/hooks/incident' },
@@ -193,7 +193,7 @@ export const NODE_DEFS: NodeDef[] = [
     summary: (c) => trunc(s(c.title, '제목 없음')),
   },
   {
-    kind: 'send_email', category: 'action', label: '이메일 발송', description: '이메일 전송 (데모: 발송 기록 + 알림)',
+    kind: 'send_email', category: 'action', label: '이메일 발송', description: '이메일 전송 (곧 제공 · 지금은 발송 기록 + 알림만 남겨요)',
     icon: Mail, color: '#22d3ee', gradient: 'from-rose-400 to-pink-600',
     fields: [
       { key: 'to', label: '받는 사람', type: 'text', placeholder: '{{form.email}}' },

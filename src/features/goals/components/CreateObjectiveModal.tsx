@@ -5,9 +5,9 @@ import { Button, Field, Input, Modal, Select, Textarea } from '@/components/ui'
 import { getCurrentUserId, toast, useCore } from '@/store/core'
 import { cn, uid } from '@/lib/utils'
 import { useGoals } from '../store'
-import { QUARTERS } from '../seed'
-import { burstConfetti, isCompanyObjective } from '../lib'
+import { burstConfetti, isCompanyObjective, quarterOptions } from '../lib'
 import type { Objective } from '../types'
+import { isHuman } from '@/features/people/format'
 
 const TEAMS = ['전사', '제품', '엔지니어링', '디자인', '마케팅', '영업', '피플팀'] as const
 const EMOJIS = ['🎯', '🚀', '💰', '⚙️', '🌱', '📣', '🎨', '🤝', '💜', '🧭', '🛠️', '🤖', '📈', '🏆']
@@ -128,7 +128,7 @@ export function CreateObjectiveModal({ open, onClose, defaultQuarter, onCreated 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Field label="분기">
             <Select value={quarter} onChange={(e) => changeQuarter(e.target.value)}>
-              {QUARTERS.map((q) => <option key={q}>{q}</option>)}
+              {quarterOptions(objectives).map((q) => <option key={q}>{q}</option>)}
             </Select>
           </Field>
           <Field label="팀">
@@ -138,7 +138,7 @@ export function CreateObjectiveModal({ open, onClose, defaultQuarter, onCreated 
           </Field>
           <Field label="담당자">
             <Select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
-              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              {users.filter(isHuman).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
             </Select>
           </Field>
           <Field label="상태">
@@ -192,7 +192,7 @@ export function CreateObjectiveModal({ open, onClose, defaultQuarter, onCreated 
                         {UNITS.map((u) => <option key={u}>{u}</option>)}
                       </Select>
                       <Select value={k.ownerId} onChange={(e) => patchKr(k.key, { ownerId: e.target.value })} className="h-8 py-0 text-xs">
-                        {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                        {users.filter(isHuman).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                       </Select>
                     </div>
                   </div>

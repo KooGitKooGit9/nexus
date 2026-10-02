@@ -10,7 +10,7 @@ import { toast, useCore } from '@/store/core'
 import type { User } from '@/store/types'
 import { cn, formatDate, gradientFor } from '@/lib/utils'
 import { useProjects } from '@/features/projects/store'
-import { DEPT_META, directReports, localTimeLabel, tenureLabel, tzShortName, useNow, LEAVE_LABEL, leaveCovers } from '../lib'
+import { deptMeta, directReports, localTimeLabel, tenureLabel, tzShortName, useNow, LEAVE_LABEL, leaveCovers } from '../lib'
 import { usePeople } from '../store'
 import { useAllLeaves } from '../leaves'
 import { DEPT_TEXT_CLS, DeptBadge, deptVar, useQuickActions } from '../components/common'
@@ -18,13 +18,14 @@ import { KudosCard } from '../components/KudosCard'
 import { WorkHoursTimeline } from '../components/WorkHoursTimeline'
 import { EditProfileModal } from '../components/EditProfileModal'
 import { GiveKudosModal } from '../components/GiveKudosModal'
+import { joinMeta } from '@/features/people/format'
 
 export function ProfilePage({ userId }: { userId: string }) {
   const users = useLiveUsers()
   const meId = useCore((s) => s.currentUserId)
   const navigate = useNavigate()
   const user = users.find((u) => u.id === userId)
-  const me = users.find((u) => u.id === meId)!
+  const me = users.find((u) => u.id === meId)
 
   if (!user) {
     return (
@@ -38,6 +39,8 @@ export function ProfilePage({ userId }: { userId: string }) {
       </Page>
     )
   }
+  // our own member record can be briefly missing (just joined / server still upserting) — wait for it
+  if (!me) return null
   return <Profile key={user.id} user={user} me={me} users={users} />
 }
 
@@ -59,7 +62,7 @@ function Profile({ user, me, users }: { user: User; me: User; users: User[] }) {
   const myProjects = useMemo(() => (projects ?? []).filter((p) => !p.archived && (p.leadId === user.id || p.memberIds.includes(user.id))), [projects, user.id])
   const leaveToday = leaves.find((l) => l.userId === user.id && leaveCovers(l, now))
   const upcomingLeave = leaves.filter((l) => l.userId === user.id && new Date(l.end) >= now).sort((a, b) => a.start.localeCompare(b.start))[0]
-  const meta = DEPT_META[user.department]
+  const meta = deptMeta(user.department)
   const grad = gradientFor(user.color ?? user.id)
 
   const copy = (text: string, label: string) => {
@@ -100,11 +103,11 @@ function Profile({ user, me, users }: { user: User; me: User; users: User[] }) {
               <div className="min-w-0 sm:pt-4">
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                   <h1 className="font-display text-3xl font-bold leading-tight tracking-tight text-fg">{user.name}</h1>
-                  {user.nameEn !== user.name && <span className="text-sm text-subtle">{user.nameEn}</span>}
+                  {user.nameEn && user.nameEn !== user.name && <span className="text-sm text-subtle">{user.nameEn}</span>}
                   {isMe && <span className="self-center rounded-full bg-accent-gradient px-2 py-0.5 text-[10px] font-bold text-white">나</span>}
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
-                  <span className="flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" />{user.title}</span>
+                  {user.title && <span className="flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" />{user.title}</span>}
                   <DeptBadge department={user.department} size="md" />
                   <span className="text-xs text-subtle">· {PRESENCE_LABEL[user.presence]}</span>
                 </div>
@@ -148,7 +151,7 @@ function Profile({ user, me, users }: { user: User; me: User; users: User[] }) {
             <CardHeader title="연락처" />
             <div className="space-y-1">
               <InfoRow icon={<Mail />} label="이메일" value={user.email} onCopy={() => copy(user.email, '이메일')} />
-              <InfoRow icon={<Phone />} label="전화" value={user.phone} onCopy={() => copy(user.phone, '전화번호')} />
+              <InfoRow icon={<Phone />} label="전화" value={user.phone} onCopy={user.phone ? () => copy(user.phone, '전화번호') : undefined} />
               <InfoRow icon={<MapPin />} label="근무지" value={user.location} />
               <InfoRow icon={<Clock />} label="현지 시각" value={`${localTimeLabel(user.timezone, now)} (${tzShortName(user.timezone, now)})`} />
             </div>
@@ -173,7 +176,7 @@ function Profile({ user, me, users }: { user: User; me: User; users: User[] }) {
                 <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-subtle">같은 팀 동료</div>
                 <div className="flex flex-wrap gap-1.5">
                   {peers.map((p) => (
-                    <Tooltip key={p.id} content={`${p.name} · ${p.title}`}>
+                    <Tooltip key={p.id} content={joinMeta(p.name, p.title)}>
                       <button onClick={() => navigate(`/people/${p.id}`)} className="transition hover:scale-110"><Avatar user={p} size="sm" showPresence /></button>
                     </Tooltip>
                   ))}
@@ -186,7 +189,7 @@ function Profile({ user, me, users }: { user: User; me: User; users: User[] }) {
           <Card>
             <CardHeader title="스킬" icon={<Sparkles className="h-4 w-4" />} />
             <div className="flex flex-wrap gap-1.5">
-              {user.skills.length ? user.skills.map((s, i) => (
+              {user.skills?.length ? user.skills.map((s, i) => (
                 <motion.span
                   key={s}
                   initial={{ opacity: 0, scale: 0.8 }}
@@ -205,13 +208,13 @@ function Profile({ user, me, users }: { user: User; me: User; users: User[] }) {
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <div className="flex items-center gap-1 text-[11px] text-subtle"><CalendarDays className="h-3 w-3" />입사일</div>
-                <div className="mt-0.5 font-medium text-fg">{formatDate(user.joinedAt)}</div>
-                <div className="text-[11px] text-muted">{tenureLabel(user.joinedAt)}째</div>
+                <div className="mt-0.5 font-medium text-fg">{validDate(user.joinedAt) ? formatDate(user.joinedAt) : <span className="text-subtle">—</span>}</div>
+                {tenureLabel(user.joinedAt) && <div className="text-[11px] text-muted">{tenureLabel(user.joinedAt)}째</div>}
               </div>
               <div>
                 <div className="flex items-center gap-1 text-[11px] text-subtle"><Cake className="h-3 w-3" />생일</div>
-                <div className="mt-0.5 font-medium text-fg">{Number(user.birthday.slice(0, 2))}월 {Number(user.birthday.slice(3))}일</div>
-                {user.birthday === formatDate(now, 'MM-dd') && <div className="text-[11px] text-pink-600 dark:text-pink-400">🎂 오늘 생일이에요!</div>}
+                <div className="mt-0.5 font-medium text-fg">{/^\d{2}-\d{2}$/.test(user.birthday ?? '') ? `${Number(user.birthday.slice(0, 2))}월 ${Number(user.birthday.slice(3))}일` : <span className="text-subtle">—</span>}</div>
+                {!!user.birthday && user.birthday === formatDate(now, 'MM-dd') && <div className="text-[11px] text-pink-600 dark:text-pink-400">🎂 오늘 생일이에요!</div>}
               </div>
             </div>
           </Card>
@@ -221,7 +224,7 @@ function Profile({ user, me, users }: { user: User; me: User; users: User[] }) {
           <Card>
             <CardHeader title="소개" />
             <p className="text-[15px] leading-relaxed text-fg/90">
-              {user.bio ?? <span className="text-subtle">{isMe ? '아직 소개가 없어요. 프로필 편집에서 자신을 소개해 보세요!' : '아직 소개가 없어요.'}</span>}
+              {user.bio || <span className="text-subtle">{isMe ? '아직 소개가 없어요. 프로필 편집에서 자신을 소개해 보세요!' : '아직 소개가 없어요.'}</span>}
             </p>
             {upcomingLeave && !leaveToday && (
               <div className="mt-4 flex items-center gap-2 rounded-xl bg-pink-500/10 px-3 py-2 text-xs text-pink-600 dark:text-pink-300">
@@ -286,13 +289,15 @@ function Profile({ user, me, users }: { user: User; me: User; users: User[] }) {
   )
 }
 
+const validDate = (v: string | undefined) => !!v && !Number.isNaN(new Date(v).getTime())
+
 function InfoRow({ icon, label, value, onCopy }: { icon: React.ReactNode; label: string; value: string; onCopy?: () => void }) {
   return (
     <div className="group flex items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-line/[0.04]">
       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-line/[0.06] text-muted [&>svg]:h-4 [&>svg]:w-4">{icon}</div>
       <div className="min-w-0 flex-1">
         <div className="text-[10px] text-subtle">{label}</div>
-        <div className="truncate text-[13px] text-fg">{value}</div>
+        <div className="truncate text-[13px] text-fg">{value || <span className="text-subtle">미입력</span>}</div>
       </div>
       {onCopy && (
         <button onClick={onCopy} className="rounded-lg p-1.5 text-subtle opacity-0 transition hover:bg-line/10 hover:text-fg group-hover:opacity-100">
@@ -310,7 +315,7 @@ function PersonRow({ user }: { user: User }) {
       <Avatar user={user} size="sm" showPresence />
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13px] font-medium text-fg">{user.name}</div>
-        <div className="truncate text-[11px] text-subtle">{user.title}</div>
+        {user.title && <div className="truncate text-[11px] text-subtle">{user.title}</div>}
       </div>
       <ChevronRight className="h-3.5 w-3.5 text-subtle opacity-0 transition group-hover:opacity-100" />
     </button>

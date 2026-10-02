@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "dev:web": "vite",
-    "server": "node server/index.mjs"
+    "server": "node server/index.mjs",
+    "start": "node server/index.mjs --prod"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

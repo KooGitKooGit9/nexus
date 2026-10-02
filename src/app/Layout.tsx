@@ -16,7 +16,9 @@ import { Skeleton } from '@/components/ui'
 import { startEventReminders } from '@/features/calendar/reminders'
 import { startInboxDelivery } from '@/lib/inbox'
 import { startWorkflowEngine } from '@/features/workflows/engine'
-import { notify } from '@/store/core'
+import { notify, toast } from '@/store/core'
+import { onSyncEvent } from '@/lib/sync'
+import { UpgradePromptHost } from '@/features/settings/billing'
 // Side-effect import: starts the focus-timer watcher even when Home (lazy) hasn't been visited yet
 import '@/features/home/store'
 
@@ -77,6 +79,8 @@ export function Layout() {
   useEffect(() => startInboxDelivery((n) => notify(n, !(n.link && n.link.split('?')[0] === location.pathname))), [])
   // Real automation: event triggers (acting client) + cron / calendar triggers (sync leader)
   useEffect(() => startWorkflowEngine(), [])
+  // Server-side rejections (plan limits…) arrive over the socket
+  useEffect(() => onSyncEvent('server-error', (m) => toast(String(m.message ?? '요청이 거절되었어요.'), { variant: 'warning', emoji: m.error === 'PLAN_LIMIT' ? '💎' : '⚠️' })), [])
   const loc = useLocation()
   const section = '/' + (loc.pathname.split('/')[1] ?? '')
   const reduceMotion = useCore((s) => s.reduceMotion)
@@ -111,6 +115,7 @@ export function Layout() {
       <ShortcutsModal />
       <CallOverlay />
       <Toaster />
+      <UpgradePromptHost />
     </div>
     </MotionConfig>
   )

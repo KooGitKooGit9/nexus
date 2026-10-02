@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Settings, UserRound, Palette, Bell, Plug, Building, ShieldCheck, Database, ChevronRight, type LucideIcon } from 'lucide-react'
+import { Settings, UserRound, Palette, Bell, Plug, Building, ShieldCheck, Database, ChevronRight, KeyRound, Users, CreditCard, type LucideIcon } from 'lucide-react'
 import { Page } from '@/app/Page'
 import { PageHeader, Avatar } from '@/components/ui'
 import { useCurrentUser } from '@/store/core'
@@ -8,7 +8,10 @@ import { cn } from '@/lib/utils'
 import { ProfileSettings } from './views/Profile'
 import { AppearanceSettings } from './views/Appearance'
 import { NotificationSettings } from './views/Notifications'
-import { IntegrationSettings } from './views/Integrations'
+import { IntegrationsTab } from './views/IntegrationsSoon'
+import { AccountSettings } from './views/Account'
+import { MemberSettings } from './views/Members'
+import { BillingSettings } from './views/Billing'
 import { WorkspaceSettings } from './views/Workspace'
 import { SecuritySettings } from './views/Security'
 import { DataSettings } from './views/Data'
@@ -17,12 +20,15 @@ interface Tab { id: string; label: string; description: string; icon: LucideIcon
 
 const TABS: Tab[] = [
   { id: 'profile', label: '프로필', description: '이름, 직함, 상태', icon: UserRound, group: '개인', render: () => <ProfileSettings /> },
+  { id: 'account', label: '계정', description: '비밀번호, 로그아웃, 탈퇴', icon: KeyRound, group: '개인', render: () => <AccountSettings /> },
   { id: 'appearance', label: '테마 & 외관', description: '다크 모드, 액센트, 밀도', icon: Palette, group: '개인', render: () => <AppearanceSettings /> },
   { id: 'notifications', label: '알림', description: '유형별 알림, 방해 금지', icon: Bell, group: '개인', render: () => <NotificationSettings /> },
-  { id: 'integrations', label: '연동', description: 'GitHub, Figma, Jira…', icon: Plug, group: '워크스페이스', render: () => <IntegrationSettings /> },
-  { id: 'workspace', label: '워크스페이스', description: '연결 상태, 회사 정보, 사용량', icon: Building, group: '워크스페이스', render: () => <WorkspaceSettings /> },
-  { id: 'security', label: '보안', description: '2단계 인증, 세션, 감사 로그', icon: ShieldCheck, group: '워크스페이스', render: () => <SecuritySettings /> },
-  { id: 'data', label: '데이터', description: '내보내기, 초기화', icon: Database, group: '워크스페이스', render: () => <DataSettings /> },
+  { id: 'workspace', label: '워크스페이스', description: '이름, 연결 상태, 위험 구역', icon: Building, group: '워크스페이스', render: () => <WorkspaceSettings /> },
+  { id: 'members', label: '멤버', description: '초대, 역할, 대기 중인 초대', icon: Users, group: '워크스페이스', render: () => <MemberSettings /> },
+  { id: 'billing', label: '요금제 & 결제', description: '플랜, 사용량, 결제', icon: CreditCard, group: '워크스페이스', render: () => <BillingSettings /> },
+  { id: 'integrations', label: '연동', description: '외부 서비스 연결', icon: Plug, group: '워크스페이스', render: () => <IntegrationsTab /> },
+  { id: 'security', label: '보안', description: '보호 장치, 로그인 보안', icon: ShieldCheck, group: '워크스페이스', render: () => <SecuritySettings /> },
+  { id: 'data', label: '데이터', description: '내보내기, 사용량', icon: Database, group: '워크스페이스', render: () => <DataSettings /> },
 ]
 
 export default function SettingsPage() {

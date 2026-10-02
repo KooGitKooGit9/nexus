@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import type { KudosBadge } from '../types'
 import { KUDOS_BADGES, KUDOS_BADGE_KEYS } from '../lib'
 import { usePeople } from '../store'
+import { isHuman } from '@/features/people/format'
 
 const SUGGESTIONS: Record<KudosBadge, string[]> = {
   collab: ['함께 일해서 정말 든든했어요!', '막힐 때마다 먼저 손 내밀어줘서 고마워요 🤝'],
@@ -49,7 +50,7 @@ export function GiveKudosModal({ open, onClose, defaultToId }: { open: boolean; 
   }, [open, defaultToId, meId])
 
   const candidates = useMemo(
-    () => users.filter((u) => u.id !== meId && (!q || [u.name, u.nameEn, u.title, u.department].some((f) => f.toLowerCase().includes(q.toLowerCase())))),
+    () => users.filter((u) => u.id !== meId && isHuman(u) && (!q || [u.name, u.nameEn, u.title, u.department].some((f) => (f ?? '').toLowerCase().includes(q.toLowerCase())))),
     [users, meId, q],
   )
   const to = users.find((u) => u.id === toId)

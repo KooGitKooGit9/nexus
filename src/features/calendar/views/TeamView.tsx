@@ -10,6 +10,7 @@ import { TYPE_META, alpha, userColor } from '../constants'
 import { blocksUser, fmt, getEventsForDay, involves, isAllDayLike, minutesOfDay, shortTime, timeLabel } from '../utils'
 import { holidayOn } from '../holidays'
 import { useNow } from '../hooks'
+import { isHuman } from '@/features/people/format'
 
 const START_H = 7
 const END_H = 22
@@ -39,7 +40,7 @@ export function TeamView({ date, onEventClick, onCreate }: Props) {
 
   const sortedUsers = useMemo(() => {
     const meU = users.filter((u) => u.id === me)
-    const rest = users.filter((u) => u.id !== me).sort((a, b) => Number(focus.includes(b.id)) - Number(focus.includes(a.id)))
+    const rest = users.filter((u) => u.id !== me && isHuman(u)).sort((a, b) => Number(focus.includes(b.id)) - Number(focus.includes(a.id)))
     return [...meU, ...rest]
   }, [users, me, focus])
 

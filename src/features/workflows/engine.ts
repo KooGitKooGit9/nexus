@@ -30,6 +30,7 @@ import { getDef } from './catalog'
 import { useWorkflows } from './store'
 import { asEngine, flags } from './localActor'
 import type { ConditionRule, FlowNode, Workflow, WorkflowRun, WorkflowRunStep } from './types'
+import { isDemoWorkspace } from '@/lib/workspace'
 
 export type Payload = Record<string, string>
 export type RunMode = 'dry' | 'live'
@@ -215,7 +216,7 @@ export function samplePayload(wf: Pick<Workflow, 'name' | 'ownerId'>, trigger: F
     const msgs = useMessenger.getState().messages.filter((m) => (!ch || m.channelId === ch.id) && !m.threadId && m.kind !== 'system' && !m.deleted && m.userId !== 'u_bot')
     const m = msgs[msgs.length - 1]
     if (m) Object.assign(p, messagePayload(m))
-    else Object.assign(p, { 'message.text': 'api-gateway 에러율이 급증했어요', 'message.author': '윤태현', 'channel.name': ch?.name ?? 'general' })
+    else Object.assign(p, { 'message.text': 'api-gateway 에러율이 급증했어요', 'message.author': isDemoWorkspace() ? '윤태현' : '동료', 'channel.name': ch?.name ?? 'general' })
     if (str(c.keyword)) p['message.text'] = `${str(c.keyword).split(',')[0].trim()} — ${p['message.text']}`
   } else if (kind === 'task_status' || kind === 'schedule') {
     const tasks = useProjects.getState().tasks.filter((t) => t.status !== 'done')
@@ -359,11 +360,15 @@ async function performAction(node: FlowNode, ctx: Ctx): Promise<string> {
       const subject = fill(c.subject, '(제목 없음)')
       if (!to) throw new Error('받는 사람이 비어 있어요')
       if (live) {
-        const n = { type: 'workflow' as const, title: `📧 [데모] 이메일 발송 기록: ${trunc(subject, 40)}`, body: `받는 사람 ${to} · 실제 메일 서버가 없어 발송되지 않았어요`, link: `/workflows/${wf.id}` }
+        const n = isDemoWorkspace()
+          ? { type: 'workflow' as const, title: `📧 [데모] 이메일 발송 기록: ${trunc(subject, 40)}`, body: `받는 사람 ${to} · 실제 메일 서버가 없어 발송되지 않았어요`, link: `/workflows/${wf.id}` }
+          : { type: 'workflow' as const, title: `📧 이메일 단계 기록: ${trunc(subject, 40)}`, body: `받는 사람 ${to} · 이메일 발송은 곧 제공돼요. 지금은 기록만 남겨요`, link: `/workflows/${wf.id}` }
         if (wf.ownerId === getCurrentUserId()) notify(n)
         else notifyUser(wf.ownerId, { ...n, actorId: 'u_bot' })
       }
-      return `[데모] 이메일 → ${to} · "${trunc(subject, 40)}" — 메일 서버가 없어 실제 발송 대신 기록만 남겨요`
+      return isDemoWorkspace()
+        ? `[데모] 이메일 → ${to} · "${trunc(subject, 40)}" — 메일 서버가 없어 실제 발송 대신 기록만 남겨요`
+        : `이메일 → ${to} · "${trunc(subject, 40)}" — 이메일 발송은 곧 제공돼요 (지금은 기록만 남겨요)`
     }
     case 'request_approval': {
       const title = fill(c.title, '자동 상신 문서').trim() || '자동 상신 문서'

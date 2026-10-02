@@ -1,39 +1,38 @@
 /**
- * Who is using this browser tab. Real multi-user: each person logs in as one of the workspace
- * members; data is shared through the backend, per-user state (drafts, read markers, prefs) is not.
+ * Who is using this browser tab. The real session is an httpOnly cookie (see LAUNCH.md); this module only
+ * caches the *identity inside the current workspace* (workspaceId + memberId) so persisted stores can
+ * namespace their localStorage cache synchronously at import time.
  *
- * - `localStorage['nexus-session']` — the browser's logged-in user
- * - `?as=<userId>` — open a tab as someone else (stored in sessionStorage for that tab only),
- *   handy for testing two people side by side in one browser.
+ * `main.tsx` awaits `initSync()` (which calls `setSessionIdentity`) BEFORE importing the app, so every
+ * store hydrates under the right namespace. Offline mode (no server) = the local demo as member `u_me`.
  */
-const LS_KEY = 'nexus-session'
-const SS_KEY = 'nexus-session-tab'
+let identity: { workspaceId: string; memberId: string } | null = null
 
-function safe<T>(fn: () => T, fallback: T): T {
-  try { return fn() } catch { return fallback }
+export function setSessionIdentity(workspaceId: string, memberId: string) {
+  identity = { workspaceId, memberId }
 }
 
-// Pick up `?as=` once, before any store hydrates.
-if (typeof window !== 'undefined') {
-  const as = new URLSearchParams(location.search).get('as')
-  if (as && /^[\w-]+$/.test(as)) {
-    safe(() => sessionStorage.setItem(SS_KEY, as), undefined)
-    const url = new URL(location.href)
-    url.searchParams.delete('as')
-    history.replaceState(history.state, '', url.toString())
-  }
-}
-
+/** The current member id inside the current workspace (`User.id` in the workspace data). */
 export function getSessionUserId(): string | null {
-  return safe(() => sessionStorage.getItem(SS_KEY), null) || safe(() => localStorage.getItem(LS_KEY), null)
+  return identity?.memberId ?? null
 }
 
-export function setSessionUserId(userId: string) {
-  safe(() => localStorage.setItem(LS_KEY, userId), undefined)
-  safe(() => sessionStorage.removeItem(SS_KEY), undefined)
+export function getSessionWorkspaceId(): string | null {
+  return identity?.workspaceId ?? null
 }
 
-export function clearSession() {
-  safe(() => localStorage.removeItem(LS_KEY), undefined)
-  safe(() => sessionStorage.removeItem(SS_KEY), undefined)
+/** localStorage namespace for per-member caches (`nexus:<store>@<scope>`). */
+export function getSessionScope(): string | null {
+  return identity ? `${identity.workspaceId}:${identity.memberId}` : null
+}
+
+/** Log out on the server, then go back to the public site. */
+export async function clearSession() {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
+  } catch {
+    /* offline — nothing to clear */
+  }
+  identity = null
+  location.assign('/login')
 }

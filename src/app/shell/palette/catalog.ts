@@ -3,6 +3,7 @@ import {
   BellOff, Keyboard, Sparkles, Palette, Settings, type LucideIcon,
 } from 'lucide-react'
 import { NAV } from '@/app/nav'
+import { getSessionScope } from '@/lib/session'
 import { useCore, useUI, toast, toggleSidebarResponsive } from '@/store/core'
 import { ACCENTS } from '@/features/settings/constants'
 import type { SearchFn, SearchResult } from '@/lib/search'
@@ -152,11 +153,16 @@ export interface RecentEntry {
   userId?: string
 }
 
-const RECENT_KEY = 'nexus:palette-recent'
+// per workspace member: recent picks must never leak across workspaces / accounts on one browser
+const RECENT_BASE = 'nexus:palette-recent'
+const recentKey = () => {
+  const scope = getSessionScope()
+  return scope ? `${RECENT_BASE}@${scope}` : RECENT_BASE
+}
 
 export function loadRecent(): RecentEntry[] {
   try {
-    const v = JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]')
+    const v = JSON.parse(localStorage.getItem(recentKey()) ?? '[]')
     return Array.isArray(v) ? v.slice(0, 5) : []
   } catch {
     return []
@@ -166,7 +172,7 @@ export function loadRecent(): RecentEntry[] {
 export function pushRecent(e: RecentEntry) {
   try {
     const next = [e, ...loadRecent().filter((r) => r.id !== e.id)].slice(0, 5)
-    localStorage.setItem(RECENT_KEY, JSON.stringify(next))
+    localStorage.setItem(recentKey(), JSON.stringify(next))
   } catch {
     /* ignore */
   }

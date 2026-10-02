@@ -4,7 +4,7 @@ import { MessageSquare, Phone, UserRound, MapPin } from 'lucide-react'
 import type { User } from '@/store/types'
 import { Avatar, Card, PRESENCE_LABEL, Tooltip } from '@/components/ui'
 import { cn, gradientFor } from '@/lib/utils'
-import { DEPT_META } from '../lib'
+import { deptMeta } from '../lib'
 import { DeptBadge, LocalTime, useQuickActions } from './common'
 
 const PRESENCE_TEXT: Record<User['presence'], string> = {
@@ -34,7 +34,7 @@ function ActionBtn({ label, onClick, children, primary }: { label: string; onCli
 
 export const ProfileCard = memo(function ProfileCard({ user, now, isMe }: { user: User; now: Date; isMe?: boolean }) {
   const qa = useQuickActions()
-  const meta = DEPT_META[user.department]
+  const meta = deptMeta(user.department)
   return (
     <Card hover spotlight padded={false} className="group cursor-pointer" onClick={() => qa.profile(user)}>
       {/* soft department-tinted header */}
@@ -56,8 +56,8 @@ export const ProfileCard = memo(function ProfileCard({ user, now, isMe }: { user
           </motion.div>
         </div>
         <h3 className="mt-3 text-[15px] font-semibold text-fg">{user.name}</h3>
-        <p className="text-[11px] text-subtle">{user.nameEn !== user.name ? user.nameEn : user.email}</p>
-        <p className="mt-1 text-[13px] text-muted line-clamp-1">{user.title}</p>
+        <p className="text-[11px] text-subtle">{user.nameEn && user.nameEn !== user.name ? user.nameEn : user.email}</p>
+        {user.title && <p className="mt-1 text-[13px] text-muted line-clamp-1">{user.title}</p>}
         <div className="mt-2.5"><DeptBadge department={user.department} /></div>
 
         <div className="mt-3 flex h-7 max-w-full items-center gap-1.5 rounded-full bg-line/[0.05] px-3 text-xs text-muted">
@@ -73,7 +73,7 @@ export const ProfileCard = memo(function ProfileCard({ user, now, isMe }: { user
 
         <div className="mt-3 flex items-center gap-3 text-[11px] text-subtle">
           <LocalTime user={user} now={now} />
-          <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{user.location}</span>
+          {user.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{user.location}</span>}
         </div>
 
         <div className="mt-4 flex w-full gap-1.5">

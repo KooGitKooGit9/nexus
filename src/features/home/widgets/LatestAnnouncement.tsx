@@ -31,7 +31,9 @@ export function LatestAnnouncement({ className, delay = 0 }: { className?: strin
     >
       <div className="glass group relative flex h-full flex-col overflow-hidden rounded-2xl transition-[border-color] hover:border-line/15">
         {!a ? (
-          <MiniEmpty emoji="📢" title="공지가 없어요" />
+          <MiniEmpty emoji="📢" title="아직 공지가 없어요">
+            <button className="text-accent hover:underline" onClick={() => navigate('/announcements?new=1')}>첫 공지 작성하기</button>
+          </MiniEmpty>
         ) : (
           <>
             <button onClick={() => navigate(`/announcements?id=${a.id}`)} className="relative h-28 shrink-0 overflow-hidden text-left" style={{ background: a.cover ?? 'linear-gradient(135deg, rgb(var(--accent)), rgb(var(--accent-2)))' }}>
@@ -55,7 +57,7 @@ export function LatestAnnouncement({ className, delay = 0 }: { className?: strin
               <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-muted">{excerpt(a.body, 110)}</p>
               <div className="mt-auto flex items-center gap-2 pt-3">
                 <Avatar userId={a.authorId} size="xs" />
-                <span className="truncate text-[11px] text-subtle">{author?.name} · {timeAgo(a.createdAt)}</span>
+                <span className="truncate text-[11px] text-subtle">{author?.name ?? '나간 멤버'} · {timeAgo(a.createdAt)}</span>
                 {!a.readBy.includes(me) ? (
                   <Button size="xs" variant="outline" className="ml-auto" leftIcon={<CheckCheck className="h-3 w-3" />} onClick={() => markRead(a.id)}>
                     읽음

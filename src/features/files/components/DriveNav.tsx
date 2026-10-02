@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Clock, Cloud, FolderPlus, HardDrive, PanelLeftClose, Plus, Star, Trash2, Upload, Users } from 'lucide-react'
 import { cn, formatBytes } from '@/lib/utils'
+import { useWorkspace } from '@/lib/workspace'
 import { Menu } from '@/components/ui'
 import { toast, useCore } from '@/store/core'
-import { useFiles } from '../store'
+import { isFileStarred, useFiles } from '../store'
 import { useDriveUI } from '../uiStore'
 import { uploadFiles } from '../hooks'
 import type { DriveSection } from '../types'
@@ -15,6 +16,8 @@ const SEED_IDS = new Set(SEED_FILES.map((f) => f.id))
 
 const BASE_USED = 128.4 * 1024 ** 3
 const TOTAL = 1024 ** 4
+/** workspace storage per plan (keep in sync with LAUNCH.md / the server) */
+const PLAN_STORAGE: Record<string, number> = { free: 5 * 1024 ** 3, pro: 100 * 1024 ** 3, business: 1024 ** 4 }
 
 export const SECTIONS: { id: DriveSection; label: string; icon: typeof HardDrive; path: string }[] = [
   { id: 'my', label: '내 드라이브', icon: HardDrive, path: '/files' },
@@ -39,14 +42,18 @@ export function DriveNav({ section, uploadTarget }: { section: DriveSection; upl
       my: 0,
       shared: live.filter((f) => f.ownerId !== me && f.sharedWith?.includes(me)).length,
       recent: 0,
-      starred: live.filter((f) => f.starred).length,
+      starred: live.filter((f) => isFileStarred(f)).length,
       trash: files.filter((f) => f.trashed).length,
     } as Record<DriveSection, number>
   }, [files, me])
 
   const uploaded = files.filter((f) => f.kind === 'file' && !SEED_IDS.has(f.id)).reduce((s, f) => s + (f.size ?? 0), 0)
-  const used = BASE_USED + uploaded
-  const pct = (used / TOTAL) * 100
+  // demo: a lively company drive; real workspaces: what was actually uploaded vs. the plan's quota (LAUNCH.md)
+  const ws = useWorkspace()
+  const demo = ws.kind === 'demo'
+  const total = demo ? TOTAL : PLAN_STORAGE[ws.plan] ?? PLAN_STORAGE.free
+  const used = demo ? BASE_USED + uploaded : uploaded
+  const pct = (used / total) * 100
 
   return (
     // Always mounted (the hidden file input must survive the overlay closing while the OS picker is open);
@@ -120,10 +127,10 @@ export function DriveNav({ section, uploadTarget }: { section: DriveSection; upl
           />
         </div>
         <div className="mt-2 flex items-baseline justify-between">
-          <span className="text-[12px]"><span className="font-display font-semibold text-fg">{(used / 1024 ** 3).toFixed(1)} GB</span> <span className="text-subtle">/ 1 TB</span></span>
+          <span className="text-[12px]"><span className="font-display font-semibold text-fg">{demo ? `${(used / 1024 ** 3).toFixed(1)} GB` : formatBytes(used)}</span> <span className="text-subtle">/ {formatBytes(total)}</span></span>
           <span className="text-[11px] text-subtle">{pct.toFixed(1)}%</span>
         </div>
-        <div className="mt-2.5 flex gap-2.5 text-[10px] text-subtle">
+        {demo && <div className="mt-2.5 flex gap-2.5 text-[10px] text-subtle">
           {[
             { c: '#ef4444', l: '문서' },
             { c: '#06b6d4', l: '미디어' },
@@ -131,8 +138,13 @@ export function DriveNav({ section, uploadTarget }: { section: DriveSection; upl
           ].map((x) => (
             <span key={x.l} className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full" style={{ background: x.c }} />{x.l}</span>
           ))}
-        </div>
-        {uploaded > 0 && <div className="mt-1.5 text-[10px] text-subtle">직접 업로드 {formatBytes(uploaded)}</div>}
+        </div>}
+        {demo && uploaded > 0 && <div className="mt-1.5 text-[10px] text-subtle">직접 업로드 {formatBytes(uploaded)}</div>}
+        {!demo && pct >= 80 && (
+          <button onClick={() => navigate('/settings/billing')} className="mt-2 text-[11px] font-medium text-accent hover:underline">
+            {pct >= 100 ? '저장 공간이 가득 찼어요 · 요금제 보기 →' : '저장 공간이 거의 찼어요 · 요금제 보기 →'}
+          </button>
+        )}
         <button
           onClick={() => toast('저장 공간 업그레이드 요청을 보냈어요', { emoji: '☁️', variant: 'success', description: '워크스페이스 관리자가 검토 후 승인합니다.' })}
           className="mt-3 w-full rounded-lg border border-accent/30 py-1.5 text-[12px] font-medium text-accent transition hover:bg-accent/10">

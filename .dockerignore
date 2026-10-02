@@ -1,0 +1,16 @@
+# never ship secrets or local data into the image
+server/.env
+server/data
+**/*.db
+**/*.db-wal
+**/*.db-shm
+node_modules
+dist
+.vite
+.git
+.claude
+.DS_Store
+*.log
+*.local
+Dockerfile
+.dockerignore

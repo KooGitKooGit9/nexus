@@ -5,6 +5,7 @@ import { AlertTriangle, AlignLeft, CalendarClock, Check, Copy, DoorOpen, MapPin,
 import { Button, Field, Input, Kbd, Modal, Select, Switch, Textarea } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { toast, useCore } from '@/store/core'
+import { isDemoWorkspace } from '@/lib/workspace'
 import { useCalendar } from '../store'
 import { COLOR_SWATCHES, CREATABLE_TYPES, ROOMS, TYPE_META, alpha } from '../constants'
 import { durationLabel, findFreeSlots, fmt, formatRange, generateMeetLink, roomConflict, TIME_OPTIONS, userConflict, type Slot } from '../utils'
@@ -68,6 +69,8 @@ function EventForm({ draft, editing, onClose, onSaved }: { draft: EventDraft; ed
   const organizerId = editing?.organizerId ?? me
   const [attendeeIds, setAttendeeIds] = useState<string[]>(() => Array.from(new Set([organizerId, ...(src.attendeeIds ?? [])])))
   const [room, setRoom] = useState<string | undefined>(src.room)
+  // the meeting rooms + auto-generated meeting links are demo props; real teams type their own place / paste their own link
+  const [demo] = useState(isDemoWorkspace)
   const [location, setLocation] = useState(src.location ?? '')
   const [videoLink, setVideoLink] = useState<string | undefined>(src.videoLink)
   const [description, setDescription] = useState(src.description ?? '')
@@ -333,8 +336,8 @@ function EventForm({ draft, editing, onClose, onSaved }: { draft: EventDraft; ed
         {/* right column */}
         <div className="space-y-4">
           <div>
-            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted"><DoorOpen className="h-3.5 w-3.5" />회의실</p>
-            <div className="grid grid-cols-2 gap-2">
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted"><DoorOpen className="h-3.5 w-3.5" />{demo ? '회의실' : '장소'}</p>
+            {demo && <div className="grid grid-cols-2 gap-2">
               {ROOMS.map((r) => {
                 const conflict = !allDay ? roomConflict(events, r.id, range.start, range.end, editing?.id) : undefined
                 const on = room === r.id
@@ -364,12 +367,23 @@ function EventForm({ draft, editing, onClose, onSaved }: { draft: EventDraft; ed
                   </button>
                 )
               })}
-            </div>
-            <div className="mt-2">
-              <Input icon={<MapPin />} value={location} onChange={(e) => { setLocation(e.target.value); setRoom(undefined) }} placeholder="또는 장소 직접 입력" />
+            </div>}
+            <div className={demo ? 'mt-2' : ''}>
+              <Input icon={<MapPin />} value={location} onChange={(e) => { setLocation(e.target.value); setRoom(undefined) }} placeholder={demo ? '또는 장소 직접 입력' : '예: 3층 회의실, 강남역 카페'} />
             </div>
           </div>
 
+          {!demo ? (
+            <div className="rounded-2xl border border-line/10 p-3">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted"><Video className="h-3.5 w-3.5" />화상 회의 링크</p>
+              <Input
+                value={videoLink ?? ''}
+                onChange={(e) => setVideoLink(e.target.value.trim() ? e.target.value.trim() : undefined)}
+                placeholder="Zoom, Google Meet 등 링크 붙여넣기"
+              />
+              <p className="mt-1.5 text-[11px] text-subtle">메신저의 허들로 바로 통화할 수도 있어요.</p>
+            </div>
+          ) : (
           <div className="rounded-2xl border border-line/10 p-3">
             <div className="flex items-center gap-2.5">
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent-2/15 text-accent-2"><Video className="h-4 w-4" /></span>
@@ -385,6 +399,7 @@ function EventForm({ draft, editing, onClose, onSaved }: { draft: EventDraft; ed
               </button>
             )}
           </div>
+          )}
 
           <div>
             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted"><Palette className="h-3.5 w-3.5" />색상</p>

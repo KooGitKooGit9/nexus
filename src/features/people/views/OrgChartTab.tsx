@@ -6,8 +6,9 @@ import { useCore } from '@/store/core'
 import type { User } from '@/store/types'
 import { Avatar, Button, Tooltip, Kbd } from '@/components/ui'
 import { cn, clamp } from '@/lib/utils'
-import { DEPT_META, DEPARTMENTS, managerChain } from '../lib'
+import { DEPT_META, DEPARTMENTS, deptMeta, managerChain } from '../lib'
 import { DEPT_TEXT_CLS, deptVar } from '../components/common'
+import { isHuman } from '@/features/people/format'
 
 const NODE_W = 216
 const NODE_H = 92
@@ -96,7 +97,10 @@ function connectorPath(p: LaidOut, n: LaidOut) {
 }
 
 export function OrgChartTab() {
-  const users = useCore((s) => s.users)
+  const allUsers = useCore((s) => s.users)
+  const users = useMemo(() => allUsers.filter(isHuman), [allUsers])
+  const usedDepts = useMemo(() => DEPARTMENTS.filter((d) => users.some((u) => u.department === d)), [users])
+  const flat = users.length > 1 && !users.some((u) => u.managerId && users.some((x) => x.id === u.managerId))
   const meId = useCore((s) => s.currentUserId)
   const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
@@ -197,7 +201,8 @@ export function OrgChartTab() {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
-          {DEPARTMENTS.map((d) => (
+          {flat && <span className="text-subtle">구성원 프로필에 매니저를 지정하면 조직도가 계층으로 그려져요.</span>}
+          {usedDepts.map((d) => (
             <span key={d} className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full" style={{ background: DEPT_META[d].color, boxShadow: `0 0 8px ${DEPT_META[d].color}` }} />
               {d}
@@ -295,7 +300,7 @@ function OrgNode({
   onHover: (id: string | null) => void; onToggle: () => void; onOpen: () => void
 }) {
   const { user: u } = node
-  const color = DEPT_META[u.department].color
+  const color = deptMeta(u.department).color
   return (
     <motion.div
       className="absolute"

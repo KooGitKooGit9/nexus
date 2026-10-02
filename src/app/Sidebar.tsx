@@ -5,7 +5,8 @@ import { ChevronsLeft, ChevronsRight, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useIsNarrow } from '@/lib/useMediaQuery'
 import { useCore, useUI, toggleSidebarResponsive } from '@/store/core'
-import { COMPANY } from '@/store/seed-users'
+import { useWorkspace } from '@/lib/workspace'
+import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 import { Tooltip, CountBadge } from '@/components/ui'
 import { NAV, SECTION_LABEL } from './nav'
 import { useSidebarBadges } from './badges'
@@ -17,6 +18,7 @@ export const SIDEBAR_WIDTH = 248
 const SPRING = { type: 'spring', stiffness: 420, damping: 42 } as const
 
 export function Sidebar() {
+  const workspace = useWorkspace()
   const pref = useCore((s) => s.sidebarCollapsed)
   const narrow = useIsNarrow()
   const peek = useUI((s) => s.sidebarPeek)
@@ -75,10 +77,12 @@ export function Sidebar() {
           </div>
           {!collapsed && (
             <>
-              <motion.div initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 }} className="min-w-0 flex-1">
-                <div className="font-display font-bold text-[15px] leading-tight tracking-tight truncate">{COMPANY.workspace}</div>
-                <div className="text-[11px] text-muted truncate">{COMPANY.name} · {COMPANY.nameKo}</div>
-              </motion.div>
+              <WorkspaceSwitcher>
+                <motion.div initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 }} className="min-w-0 flex-1">
+                  <div className="font-display font-bold text-[15px] leading-tight tracking-tight truncate">{workspace.name}</div>
+                  <div className="text-[11px] text-muted truncate">{workspace.kind === 'demo' ? '데모 워크스페이스' : 'Nexus'}</div>
+                </motion.div>
+              </WorkspaceSwitcher>
               <Tooltip content={<span>사이드바 접기 <span className="ml-1 text-white/50">[</span></span>} side="bottom">
                 <button
                   onClick={toggleSidebarResponsive}

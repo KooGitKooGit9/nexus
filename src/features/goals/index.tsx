@@ -7,22 +7,24 @@ import { Button, EmptyState, FadeIn, PageHeader, Tabs } from '@/components/ui'
 import { getCurrentUserId, useUI } from '@/store/core'
 import { cn } from '@/lib/utils'
 import { useGoals } from './store'
-import { QUARTERS, CURRENT_QUARTER } from './seed'
+import { CURRENT_QUARTER } from './seed'
 import type { Objective } from './types'
-import { isCompanyObjective } from './lib'
+import { isCompanyObjective, quarterOf, quarterOptions } from './lib'
 import { GoalsSummary } from './components/GoalsSummary'
 import { ObjectiveCard } from './components/ObjectiveCard'
 import { AlignmentTree } from './components/AlignmentTree'
 import { KRCheckInModal } from './components/KRCheckInModal'
 import { CreateObjectiveModal } from './components/CreateObjectiveModal'
 import { ObjectiveDrawer } from './components/ObjectiveDrawer'
+import { isDemoWorkspace, useWorkspace } from '@/lib/workspace'
 
 type View = 'list' | 'tree'
 
 export default function GoalsPage() {
+  const workspaceName = useWorkspace().name
   const [params, setParams] = useSearchParams()
   const all = useGoals((s) => s.objectives)
-  const quarter = params.get('quarter') ?? CURRENT_QUARTER
+  const quarter = params.get('quarter') ?? (isDemoWorkspace() ? CURRENT_QUARTER : quarterOf())
   const [view, setView] = useState<View>('list')
   const [team, setTeam] = useState<string>('전체')
   const [mine, setMine] = useState(false)
@@ -97,10 +99,10 @@ export default function GoalsPage() {
       <PageHeader
         icon={<Target />}
         title="목표 & OKR"
-        subtitle={`오로라랩스 · ${quarter} · 회사 목표 ${companyCount}개 · 팀 목표 ${inQuarter.length - companyCount}개`}
+        subtitle={`${workspaceName} · ${quarter} · 회사 목표 ${companyCount}개 · 팀 목표 ${inQuarter.length - companyCount}개`}
         actions={
           <>
-            <Tabs size="sm" value={quarter} onChange={(q) => setParam('quarter', q)} items={QUARTERS.map((q) => ({ value: q, label: q }))} />
+            <Tabs size="sm" value={quarter} onChange={(q) => setParam('quarter', q)} items={quarterOptions(all).map((q) => ({ value: q, label: q }))} />
             <Tabs<View>
               size="sm"
               value={view}

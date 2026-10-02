@@ -104,8 +104,11 @@ function PopoverBody({ ev, onClose, onEdit, onDuplicated }: { ev: CalEvent; onCl
   const live = new Date(ev.start) <= new Date() && new Date(ev.end) > new Date()
   const allDay = isAllDayLike(ev)
 
+  // demo links (meet.nexus.app) are placeholders → in-app call; anything else is a real link the user pasted
+  const internalMeet = /^https:\/\/meet\.nexus\.app\//.test(ev.videoLink ?? '')
   const join = () => {
-    useUI.getState().startCall({ title: ev.title, participantIds: ev.attendeeIds, video: true })
+    if (ev.videoLink && !internalMeet && /^https?:\/\//i.test(ev.videoLink)) window.open(ev.videoLink, '_blank', 'noopener,noreferrer')
+    else useUI.getState().startCall({ title: ev.title, participantIds: ev.attendeeIds, video: true })
     onClose()
   }
   const rsvp = (s: RsvpStatus) => {
@@ -182,8 +185,8 @@ function PopoverBody({ ev, onClose, onEdit, onDuplicated }: { ev: CalEvent; onCl
           <Row icon={<Video className="h-4 w-4" />}>
             <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-medium text-fg">Nexus Meet 화상 회의</p>
-                <a href={ev.videoLink} onClick={(e) => { e.preventDefault(); navigator.clipboard?.writeText(ev.videoLink!); toast('회의 링크를 복사했어요', { emoji: '🔗', duration: 2000 }) }} className="flex items-center gap-1 truncate text-[11px] text-accent-2 hover:underline">
+                <p className="text-[13px] font-medium text-fg">{internalMeet ? 'Nexus Meet 화상 회의' : '화상 회의'}</p>
+                <a href={/^https?:\/\//i.test(ev.videoLink) ? ev.videoLink : undefined} target="_blank" rel="noopener noreferrer" onClick={(e) => { if (!internalMeet) return; e.preventDefault(); navigator.clipboard?.writeText(ev.videoLink!); toast('회의 링크를 복사했어요', { emoji: '🔗', duration: 2000 }) }} className="flex items-center gap-1 truncate text-[11px] text-accent-2 hover:underline">
                   {ev.videoLink.replace('https://', '')}<ExternalLink className="h-3 w-3" />
                 </a>
               </div>
@@ -207,7 +210,7 @@ function PopoverBody({ ev, onClose, onEdit, onDuplicated }: { ev: CalEvent; onCl
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className={cn('truncate text-[12.5px] text-fg', st === 'no' && 'text-muted line-through')}>
-                        {u?.name}{id === me && <span className="ml-1 text-[10px] text-accent">(나)</span>}
+                        {u?.name ?? '나간 멤버'}{id === me && <span className="ml-1 text-[10px] text-accent">(나)</span>}
                       </p>
                       <p className="truncate text-[10.5px] text-subtle">{id === ev.organizerId ? '주최자' : u?.title}</p>
                     </div>

@@ -12,6 +12,7 @@ import { ProjectCard } from '../components/ProjectCard'
 import { MyTasks } from '../components/MyTasks'
 import { SprintWidget } from '../components/SprintWidget'
 import { CreateProjectModal } from '../components/CreateProjectModal'
+import { useWorkspace } from '@/lib/workspace'
 
 function Stat({ icon, label, value, tone, delay }: { icon: ReactNode; label: string; value: number; tone: string; delay: number }) {
   return (
@@ -33,6 +34,7 @@ function Stat({ icon, label, value, tone, delay }: { icon: ReactNode; label: str
 type ProjectFilter = 'all' | 'mine' | 'archived'
 
 export function Overview() {
+  const workspaceName = useWorkspace().name
   const projects = useProjects((s) => s.projects)
   const tasks = useProjects((s) => s.tasks)
   const me = useCore((s) => s.currentUserId)
@@ -66,7 +68,7 @@ export function Overview() {
       <PageHeader
         icon={<KanbanSquare />}
         title="프로젝트"
-        subtitle={<span className="whitespace-normal">오로라랩스의 프로젝트 {active.length}개 · 미완료 태스크 {stats.unfinished}개</span>}
+        subtitle={<span className="whitespace-normal">{workspaceName}의 프로젝트 {active.length}개 · 미완료 태스크 {stats.unfinished}개</span>}
         actions={
           <>
             <Button variant="secondary" leftIcon={<Plus className="h-4 w-4" />} onClick={openNew}>
@@ -122,6 +124,11 @@ export function Overview() {
             <div>
               <h2 className="mb-3 flex items-center gap-2 text-[15px] font-semibold text-fg"><Timer className="h-4 w-4 text-accent" />진행 중인 스프린트</h2>
               <div className="space-y-2.5">
+                {!active.some((p) => p.sprint) && (
+                  <div className="rounded-2xl border border-dashed border-line/15 px-4 py-6 text-center text-[12.5px] text-subtle">
+                    진행 중인 스프린트가 없어요
+                  </div>
+                )}
                 {active.filter((p) => p.sprint).map((p) => (
                   <button key={p.id} onClick={() => navigate(`/projects/${p.id}`)} className="block w-full text-left transition hover:-translate-y-0.5">
                     <SprintWidget project={p} tasks={tasks} compact />

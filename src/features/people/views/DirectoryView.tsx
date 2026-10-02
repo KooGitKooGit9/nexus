@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Clock, Heart, Network, Users, Palmtree, Wifi, Sparkles } from 'lucide-react'
 import { Page } from '@/app/Page'
 import { Button, PageHeader, UnderlineTabs, useLiveUsers } from '@/components/ui'
-import { COMPANY } from '@/store/seed-users'
+import { useWorkspace } from '@/lib/workspace'
 import { usePeople } from '../store'
 import { useAllLeaves } from '../leaves'
 import { isRecentKudos, leaveCovers } from '../lib'
@@ -13,16 +13,19 @@ import { OrgChartTab } from './OrgChartTab'
 import { AttendanceTab } from './AttendanceTab'
 import { KudosTab } from './KudosTab'
 import { GiveKudosModal } from '../components/GiveKudosModal'
+import { isHuman } from '@/features/people/format'
 
 type Tab = 'members' | 'org' | 'attendance' | 'kudos'
 const TABS: Tab[] = ['members', 'org', 'attendance', 'kudos']
 
 export function DirectoryView() {
+  const workspaceName = useWorkspace().name
   const [params, setParams] = useSearchParams()
   const tabParam = params.get('tab') as Tab | null
   const tab: Tab = tabParam && TABS.includes(tabParam) ? tabParam : 'members'
   const [kudosOpen, setKudosOpen] = useState(false)
-  const users = useLiveUsers()
+  const live = useLiveUsers()
+  const users = useMemo(() => live.filter(isHuman), [live])
   const kudos = usePeople((s) => s.kudos)
   const leaves = useAllLeaves()
 
@@ -57,7 +60,7 @@ export function DirectoryView() {
       <PageHeader
         icon={<Users />}
         title="구성원"
-        subtitle={`${COMPANY.nameKo} · 함께 일하는 ${users.length}명의 동료들`}
+        subtitle={`${workspaceName} · 함께 일하는 ${users.length}명의 동료들`}
         actions={
           <>
             <Button variant="secondary" size="sm" leftIcon={<Network className="h-4 w-4" />} onClick={() => setTab('org')}>조직도</Button>

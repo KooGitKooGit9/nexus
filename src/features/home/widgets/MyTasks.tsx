@@ -98,8 +98,8 @@ export function MyTasks({ className, delay }: { className?: string; delay?: numb
       }
     >
       {shown.length === 0 ? (
-        <MiniEmpty emoji={open.length ? '🎯' : '🏝️'} title={!open.length ? '모든 할 일을 끝냈어요!' : filter === 'overdue' ? '지연된 태스크가 없어요 👏' : filter === 'soon' ? '오늘·내일 마감인 태스크가 없어요' : '해당하는 태스크가 없어요'}>
-          <button className="text-accent hover:underline" onClick={() => navigate('/projects?new=1')}>새 태스크 만들기</button>
+        <MiniEmpty emoji={open.length ? '🎯' : '🏝️'} title={!open.length ? (tasks?.some((t) => t.assigneeIds.includes(me)) ? '모든 할 일을 끝냈어요!' : '나에게 배정된 태스크가 없어요') : filter === 'overdue' ? '지연된 태스크가 없어요 👏' : filter === 'soon' ? '오늘·내일 마감인 태스크가 없어요' : '해당하는 태스크가 없어요'}>
+          <button className="text-accent hover:underline" onClick={() => navigate('/projects?new=1')}>{projects?.length ? '새 태스크 만들기' : '첫 프로젝트 만들기'}</button>
         </MiniEmpty>
       ) : (
         <ul className="space-y-1">

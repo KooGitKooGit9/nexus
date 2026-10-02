@@ -8,7 +8,7 @@
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { useCore, getUser, getCurrentUserId } from '@/store/core'
-import { COMPANY } from '@/store/seed-users'
+import { currentWorkspace, isDemoWorkspace } from '@/lib/workspace'
 import type { Presence, User } from '@/store/types'
 import { useInbox } from '@/lib/inbox'
 import { isUserOnline } from '@/lib/sync'
@@ -262,7 +262,8 @@ function approvalBrief(r: ApprovalRequest) {
 function managerChain(userId: string, depth: number): string[] {
   const out: string[] = []
   let cur = getUser(userId)?.managerId
-  while (cur && out.length < depth && !out.includes(cur)) {
+  // stop at a manager who is no longer in the workspace
+  while (cur && out.length < depth && !out.includes(cur) && getUser(cur)) {
     out.push(cur)
     cur = getUser(cur)?.managerId
   }
@@ -936,7 +937,8 @@ const WRITE: ToolDef[] = [
         type: (str(a.type) as CalEvent['type']) || 'meeting',
         attendeeIds: ids,
         location: str(a.location).trim() || undefined,
-        videoLink: a.video ? generateMeetLink() : undefined,
+        // auto-generated meeting links are a demo prop — real workspaces paste their own link
+        videoLink: a.video && isDemoWorkspace() ? generateMeetLink() : undefined,
         description: str(a.description).trim() || undefined,
       })
       const label = allDay ? `${day(ev.start)} 종일` : `${when(ev.start)} – ${format(new Date(ev.end), 'HH:mm')}`
@@ -1090,7 +1092,8 @@ const WRITE: ToolDef[] = [
       let approverIds = peopleOf(strs(a.approvers)).map((u) => u.id).filter((id) => id !== m)
       if (!approverIds.length) {
         const chain = managerChain(m, 2)
-        approverIds = kind === 'access' ? Array.from(new Set([chain[0], 'u_cto'].filter((x): x is string => !!x && x !== m))) : chain.slice(0, kind === 'leave' ? 1 : 2)
+        const cto = isDemoWorkspace() && getUser('u_cto') ? 'u_cto' : undefined
+        approverIds = kind === 'access' ? Array.from(new Set([chain[0], cto].filter((x): x is string => !!x && x !== m))) : chain.slice(0, kind === 'leave' ? 1 : 2)
       }
       if (!approverIds.length) fail('결재자를 정할 수 없습니다. approvers로 지정해 주세요.')
       const start = str(a.startDate) ? parseWhen(str(a.startDate)) : null
@@ -1321,7 +1324,7 @@ export function promptContext(confirmBeforeSend: boolean): PromptContext {
   return {
     me: { ...meU, title: meU.title, department: meU.department },
     now: new Date(),
-    company: COMPANY,
+    company: { name: currentWorkspace().name, nameKo: currentWorkspace().name },
     users: all.map((u) => ({ id: u.id, name: u.name, nameEn: u.nameEn, title: u.title, department: u.department, statusText: u.statusText })),
     channels,
     projects,

@@ -200,7 +200,7 @@ export function Composer({ channelId, threadId, placeholder, variant = 'channel'
     if (ac.type === 'mention') {
       const members = channel?.memberIds ?? []
       const list = users
-        .filter((u) => !q || u.name.toLowerCase().includes(q) || u.nameEn.toLowerCase().includes(q) || u.title.toLowerCase().includes(q))
+        .filter((u) => u.id !== 'u_bot' && (!q || u.name.toLowerCase().includes(q) || (u.nameEn ?? '').toLowerCase().includes(q) || (u.title ?? '').toLowerCase().includes(q)))
         .sort((a, b) => Number(members.includes(b.id)) - Number(members.includes(a.id)))
         .slice(0, 7)
         .map((u) => ({

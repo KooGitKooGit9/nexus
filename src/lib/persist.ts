@@ -1,33 +1,30 @@
 import { persist, createJSONStorage, type PersistOptions, type StateStorage } from 'zustand/middleware'
 import type { StateCreator, StoreApi, UseBoundStore } from 'zustand'
-import { getSessionUserId } from './session'
+import { getSessionScope } from './session'
 import { registerSyncedStore, isServerMode } from './sync'
 
 /**
  * All feature stores persist under the `nexus:` prefix so Settings → "워크스페이스 초기화"
  * can wipe everything. Bump `version` when you change seed data shape.
  *
- * localStorage is a per-user *cache* (`nexus:<store>@<userId>`); when the backend is reachable the
+ * localStorage is a per-member *cache* (`nexus:<store>@<workspaceId>:<memberId>`); when the backend is reachable the
  * source of truth is the server (see `lib/sync.ts`).
  */
 export const STORAGE_PREFIX = 'nexus:'
 
 const userScopedStorage: StateStorage = {
   getItem: (name) => {
-    const user = getSessionUserId()
-    if (user) {
-      const scoped = localStorage.getItem(`${name}@${user}`)
-      if (scoped !== null) return scoped
-    }
-    return localStorage.getItem(name) // legacy (pre-login) cache
+    const scope = getSessionScope()
+    // Signed in: only this workspace member's cache — never fall back to another workspace's data.
+    return scope ? localStorage.getItem(`${name}@${scope}`) : localStorage.getItem(name)
   },
   setItem: (name, value) => {
-    const user = getSessionUserId()
-    localStorage.setItem(user ? `${name}@${user}` : name, value)
+    const scope = getSessionScope()
+    localStorage.setItem(scope ? `${name}@${scope}` : name, value)
   },
   removeItem: (name) => {
-    const user = getSessionUserId()
-    localStorage.removeItem(user ? `${name}@${user}` : name)
+    const scope = getSessionScope()
+    localStorage.removeItem(scope ? `${name}@${scope}` : name)
   },
 }
 
@@ -57,8 +54,8 @@ export function syncAcrossTabs(store: PersistedStore) {
   registerSyncedStore(fullName.replace(STORAGE_PREFIX, ''), store)
   window.addEventListener('storage', (e) => {
     if (isServerMode()) return // server pushes updates; rehydrating here would echo writes back
-    const user = getSessionUserId()
-    if (e.key === fullName || (user && e.key === `${fullName}@${user}`)) store.persist!.rehydrate()
+    const scope = getSessionScope()
+    if (e.key === fullName || (scope && e.key === `${fullName}@${scope}`)) store.persist!.rehydrate()
   })
 }
 

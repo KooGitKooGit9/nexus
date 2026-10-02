@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { getUser, useCore } from '@/store/core'
 import { Avatar, Button, Popover, PRESENCE_LABEL } from '@/components/ui'
 import { useMessenger } from './store'
+import { joinMeta } from '@/features/people/format'
 
 /* ───────────── Inline tokenizer ───────────── */
 
@@ -123,7 +124,7 @@ export function ProfileCard({ userId, onDone }: { userId: string; onDone?: () =>
           {u.name}
           {u.statusEmoji && <span>{u.statusEmoji}</span>}
         </div>
-        <div className="text-xs text-muted">{u.title} · {u.department}</div>
+        <div className="text-xs text-muted">{joinMeta(u.title, u.department)}</div>
         {u.statusText && <div className="mt-2 rounded-lg bg-line/[0.05] px-2.5 py-1.5 text-xs text-muted">{u.statusEmoji} {u.statusText}</div>}
         <div className="mt-2 flex items-center gap-3 text-[11px] text-subtle">
           <span>{PRESENCE_LABEL[u.presence]}</span>

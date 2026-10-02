@@ -1,6 +1,7 @@
 import { Plane, Receipt, ShoppingCart, KeyRound, FileText, Palmtree, type LucideIcon } from 'lucide-react'
 import type { Tone } from '@/components/ui'
 import type { ApprovalKind, ApprovalRequest, ApprovalStatus, LeaveType } from './types'
+import { isDemoWorkspace } from '@/lib/workspace'
 
 export interface KindMeta {
   label: string
@@ -82,7 +83,8 @@ export function usedLeave(requests: ApprovalRequest[], userId: string): number {
   const fromReq = requests
     .filter((r) => r.kind === 'leave' && r.requesterId === userId && r.status === 'approved' && r.leaveType !== 'sick' && r.leaveType !== 'family')
     .reduce((n, r) => n + (r.days ?? leaveDays(r.leaveType, r.startDate, r.endDate)), 0)
-  return (BASE_LEAVE_USED[userId] ?? 5) + fromReq
+  // the pre-existing usage is demo flavour — real workspaces only count what was actually approved here
+  return (isDemoWorkspace() ? BASE_LEAVE_USED[userId] ?? 5 : 0) + fromReq
 }
 
 /** Default approval line: walk up the managerId chain. */
@@ -91,8 +93,11 @@ export function managerChain(users: { id: string; managerId: string | null }[], 
   let cur = users.find((u) => u.id === userId)
   while (cur?.managerId && chain.length < max) {
     if (chain.includes(cur.managerId)) break
-    chain.push(cur.managerId)
-    cur = users.find((u) => u.id === cur!.managerId)
+    const next = users.find((u) => u.id === cur!.managerId)
+    // a manager who left the workspace can't approve anything
+    if (!next) break
+    chain.push(next.id)
+    cur = next
   }
   return chain
 }

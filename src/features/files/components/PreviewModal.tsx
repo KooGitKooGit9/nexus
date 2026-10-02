@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Download, Info, MessageSquare, PanelRightClo
 import { cn, formatBytes, formatDate, hashIndex, minutesAgo, timeAgo } from '@/lib/utils'
 import { Avatar, AvatarStack, Tooltip, UnderlineTabs } from '@/components/ui'
 import { useCore } from '@/store/core'
-import { pathOf, useFiles } from '../store'
+import { isFileStarred, pathOf, useFiles } from '../store'
 import { useDriveUI } from '../uiStore'
 import { KIND_META, kindOf } from '../fileTypes'
 import { downloadItems, useItemActions } from '../hooks'
@@ -103,9 +103,9 @@ export function PreviewModal({ siblings }: { siblings: FileItem[] }) {
               <div className="text-[11px] text-white/50">{meta.label}{item.size ? ` · ${formatBytes(item.size)}` : ''}{list.length > 1 && idx >= 0 ? ` · ${idx + 1} / ${list.length}` : ''}</div>
             </div>
             <div className="flex items-center gap-1">
-              <Tooltip content={item.starred ? '중요 표시 해제' : '중요 표시'} side="bottom">
+              <Tooltip content={isFileStarred(item) ? '중요 표시 해제' : '중요 표시'} side="bottom">
                 <button onClick={() => toggleStar([item.id])} className="rounded-lg p-2 text-white/70 hover:bg-white/10 hover:text-white">
-                  <Star className={cn('h-[18px] w-[18px]', item.starred && 'fill-amber-400 text-amber-400')} />
+                  <Star className={cn('h-[18px] w-[18px]', isFileStarred(item) && 'fill-amber-400 text-amber-400')} />
                 </button>
               </Tooltip>
               <Tooltip content="공유" side="bottom">

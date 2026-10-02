@@ -31,7 +31,9 @@ export function OkrWidget({ className, delay }: { className?: string; delay?: nu
       action={<WidgetLink onClick={() => navigate('/goals')}>OKR →</WidgetLink>}
     >
       {company.length === 0 ? (
-        <MiniEmpty emoji="🎯" title="이번 분기 목표가 없어요" />
+        <MiniEmpty emoji="🎯" title="이번 분기 목표가 없어요">
+          <button className="text-accent hover:underline" onClick={() => navigate('/goals?new=1')}>첫 목표 세우기</button>
+        </MiniEmpty>
       ) : (
         <div className="grid grid-cols-3 gap-3">
           {company.slice(0, 3).map((o, i) => {

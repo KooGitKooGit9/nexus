@@ -8,6 +8,7 @@ import type { FlowNode, FlowNodeData, Workflow } from '../types'
 import { NodeIcon, formatDuration } from '../components/bits'
 import { FieldInput } from './fields'
 import { demoWebhookUrl, nextCronRun } from '../engine'
+import { isDemoWorkspace } from '@/lib/workspace'
 
 interface Props {
   node: FlowNode | null
@@ -78,9 +79,9 @@ function NodeForm({ node, workflowId, variables, onChangeData, onDelete, onDupli
         ))}
         {node.data.kind === 'webhook' && (
           <div className="rounded-xl border border-warning/25 bg-warning/[0.06] p-3 text-[11.5px]">
-            <div className="mb-1 flex items-center gap-1.5 font-semibold text-warning">엔드포인트 <Badge tone="warning">데모</Badge></div>
+            <div className="mb-1 flex items-center gap-1.5 font-semibold text-warning">엔드포인트 <Badge tone="warning">{isDemoWorkspace() ? '데모' : '곧 제공'}</Badge></div>
             <code className="block break-all font-mono text-[11px] text-fg/80">{String(node.data.config.method ?? 'POST')} {demoWebhookUrl(workflowId, String(node.data.config.path ?? '/hooks/new'))}</code>
-            <p className="mt-1.5 text-muted">외부 호출 수신 서버는 없어요. 상단 <b>지금 실행</b>에서 JSON 본문을 넣어 웹훅 호출을 재현할 수 있어요.</p>
+            <p className="mt-1.5 text-muted">{isDemoWorkspace() ? '외부 호출 수신 서버는 없어요.' : '외부 호출 수신은 곧 제공돼요.'} 상단 <b>지금 실행</b>에서 JSON 본문을 넣어 웹훅 호출을 재현할 수 있어요.</p>
           </div>
         )}
         {node.data.kind === 'form_submitted' && (
@@ -155,7 +156,7 @@ function WorkflowInfo({ workflow, onUpdate, nodeTypesCount }: { workflow: Workfl
       </div>
 
       <div className="space-y-2 text-xs">
-        <div className="flex items-center justify-between"><span className="text-muted">소유자</span><span className="flex items-center gap-1.5 text-fg"><Avatar userId={workflow.ownerId} size="xs" />{owner?.name}</span></div>
+        <div className="flex items-center justify-between"><span className="text-muted">소유자</span><span className="flex items-center gap-1.5 text-fg"><Avatar userId={workflow.ownerId} size="xs" />{owner?.name ?? '나간 멤버'}</span></div>
         <div className="flex items-center justify-between"><span className="text-muted">생성일</span><span className="text-fg">{formatDate(workflow.createdAt)}</span></div>
         <div className="flex items-center justify-between"><span className="text-muted">마지막 수정</span><span className="text-fg">{timeAgo(workflow.updatedAt)}</span></div>
       </div>

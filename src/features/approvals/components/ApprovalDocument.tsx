@@ -7,6 +7,8 @@ import { useCore } from '@/store/core'
 import { KIND_META, LEAVE_LABEL, won } from '../meta'
 import type { ApprovalRequest } from '../types'
 import { Seal } from './bits'
+import { useWorkspace } from '@/lib/workspace'
+import { joinMeta } from '@/features/people/format'
 
 function Row({ label, children, className }: { label: ReactNode; children: ReactNode; className?: string }) {
   return (
@@ -55,7 +57,7 @@ export function StampTable({ r, animate = true }: { r: ApprovalRequest; animate?
               {(c.status === 'waiting' || (c.status === 'pending' && r.status !== 'pending')) && <span className="text-[11px] text-subtle/60">—</span>}
             </div>
             <div className="border-t border-line/15 px-1 py-1 text-center">
-              <div className="truncate text-[11.5px] font-semibold text-fg">{user?.name}</div>
+              <div className="truncate text-[11.5px] font-semibold text-fg">{user?.name ?? '나간 멤버'}</div>
               <div className="text-[9.5px] text-subtle">{c.date && c.status !== 'pending' && c.status !== 'waiting' ? formatDate(c.date, 'yy.MM.dd') : ' '}</div>
             </div>
           </div>
@@ -116,6 +118,7 @@ function period(r: ApprovalRequest, withTime = false) {
 
 /** Formal 결재 문서 view. */
 export function ApprovalDocument({ r, animateStamps = true, className }: { r: ApprovalRequest; animateStamps?: boolean; className?: string }) {
+  const workspaceName = useWorkspace().name
   const users = useCore((s) => s.users)
   const requester = users.find((u) => u.id === r.requesterId)
   const m = KIND_META[r.kind]
@@ -130,7 +133,7 @@ export function ApprovalDocument({ r, animateStamps = true, className }: { r: Ap
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 pt-1">
             <div className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.2em] text-subtle">
-              <span className="h-2 w-2 rounded-sm bg-accent-gradient" /> Aurora Labs · 전자결재
+              <span className="h-2 w-2 rounded-sm bg-accent-gradient" /> {workspaceName} · 전자결재
             </div>
             <h2 className="mt-2 font-display text-[26px] font-bold tracking-[0.25em] text-fg">{m.docTitle}</h2>
             <div className="mt-1 h-[3px] w-24 border-y border-fg/40" />
@@ -141,18 +144,18 @@ export function ApprovalDocument({ r, animateStamps = true, className }: { r: Ap
         <div className="mt-5 grid overflow-hidden rounded-lg border border-line/10 sm:grid-cols-2">
           <div className="sm:border-r sm:border-line/10">
             <Row label="문서번호"><span className="font-mono text-[12px]">{r.docNo ?? '(상신 시 자동 부여)'}</span></Row>
-            <Row label="기안자"><span className="flex items-center gap-1.5"><Avatar userId={r.requesterId} size="xs" />{requester?.name} <span className="text-muted">{requester?.title}</span></span></Row>
+            <Row label="기안자"><span className="flex items-center gap-1.5"><Avatar userId={r.requesterId} size="xs" />{requester?.name ?? '나간 멤버'} <span className="text-muted">{requester?.title}</span></span></Row>
           </div>
           <div className="border-t border-line/10 sm:border-t-0">
             <Row label="기안일">{formatDate(r.createdAt, 'yyyy.MM.dd (EEE) HH:mm')}</Row>
-            <Row label="소속">{requester?.department ?? '-'} · 오로라랩스</Row>
+            <Row label="소속">{joinMeta(requester?.department, workspaceName)}</Row>
           </div>
           {!!r.ccIds?.length && (
             <Row label="참조" className="border-t border-line/10 sm:col-span-2">
               <span className="flex flex-wrap items-center gap-2">
                 {r.ccIds.map((id) => {
                   const u = users.find((x) => x.id === id)
-                  return <span key={id} className="flex items-center gap-1 rounded-full bg-line/[0.05] py-0.5 pl-0.5 pr-2 text-[12px]"><Avatar userId={id} size="xs" />{u?.name}</span>
+                  return <span key={id} className="flex items-center gap-1 rounded-full bg-line/[0.05] py-0.5 pl-0.5 pr-2 text-[12px]"><Avatar userId={id} size="xs" />{u?.name ?? '나간 멤버'}</span>
                 })}
               </span>
             </Row>
@@ -218,7 +221,7 @@ export function ApprovalDocument({ r, animateStamps = true, className }: { r: Ap
 
         <div className="mt-6 text-center text-[12px] text-muted">
           위와 같이 {r.kind === 'leave' ? '휴가를 신청' : r.kind === 'expense' ? '지출을 결의' : r.kind === 'purchase' ? '구매를 요청' : r.kind === 'travel' ? '출장을 신청' : r.kind === 'access' ? '권한을 신청' : '기안'}하오니 재가하여 주시기 바랍니다.
-          <div className="mt-1 font-medium text-fg">{formatDate(r.createdAt, 'yyyy년 M월 d일')} · 기안자 {requester?.name}</div>
+          <div className="mt-1 font-medium text-fg">{formatDate(r.createdAt, 'yyyy년 M월 d일')} · 기안자 {requester?.name ?? '나간 멤버'}</div>
         </div>
 
         {/* Final overlay seal */}

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Building2 } from 'lucide-react'
 import { Avatar } from '@/components/ui'
 import { cn } from '@/lib/utils'
-import { COMPANY } from '@/store/seed-users'
+import { useWorkspace } from '@/lib/workspace'
 import type { Objective } from '../types'
 import { STATUS_META, averageProgress, isCompanyObjective, objectiveProgress } from '../lib'
 import { Ring, STATUS_GRADIENT } from './Ring'
@@ -12,6 +12,7 @@ interface Edge { id: string; d: string; color: string; delay: number }
 
 /** Visual alignment tree: company root → company objectives → team objectives, with SVG bezier connectors. */
 export function AlignmentTree({ objectives, quarter, onOpen }: { objectives: Objective[]; quarter: string; onOpen: (id: string) => void }) {
+  const workspaceName = useWorkspace().name
   const wrap = useRef<HTMLDivElement>(null)
   const [edges, setEdges] = useState<Edge[]>([])
   const [size, setSize] = useState({ w: 0, h: 0 })
@@ -92,7 +93,7 @@ export function AlignmentTree({ objectives, quarter, onOpen }: { objectives: Obj
           >
             <Building2 className="h-5 w-5" />
             <div>
-              <div className="text-sm font-semibold">{COMPANY.nameKo} · {quarter}</div>
+              <div className="text-sm font-semibold">{workspaceName} · {quarter}</div>
               <div className="text-[11px] text-white/80">회사 목표 {companies.filter(isCompanyObjective).length}개 · 전체 {overall}%</div>
             </div>
           </motion.div>

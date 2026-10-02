@@ -94,6 +94,7 @@ export type GeminiErrorCode =
   | 'MALFORMED' // model produced an invalid function call
   | 'BAD_REQUEST'
   | 'ABORTED'
+  | 'PLAN_LIMIT' // 402 — the workspace used up its plan's daily AI quota
 
 export class GeminiError extends Error {
   code: GeminiErrorCode
@@ -111,7 +112,7 @@ export function errorMessage(err: unknown): string {
   const e = err instanceof GeminiError ? err : null
   switch (e?.code) {
     case 'NO_KEY': return 'Gemini API 키가 설정되지 않았어요. `server/.env`에 `GEMINI_API_KEY`를 넣고 서버를 다시 시작해 주세요.'
-    case 'AUTH': return 'Gemini API 키가 거부되었어요. `server/.env`의 `GEMINI_API_KEY`를 확인해 주세요.'
+    case 'AUTH': return 'AI 서비스 인증에 실패했어요. 잠시 후 다시 시도해 주세요. 문제가 계속되면 관리자에게 알려 주세요.'
     case 'RATE_LIMIT': return '요청이 너무 많아 Gemini가 잠시 쉬고 있어요 (429). 잠시 후 다시 시도해 주세요.'
     case 'OVERLOADED': return 'Gemini 서버가 혼잡해요. 잠시 후 다시 시도해 주세요.'
     case 'NETWORK': return 'AI 서버에 연결하지 못했어요. 네트워크나 Nexus 서버 상태를 확인해 주세요.'
@@ -119,6 +120,7 @@ export function errorMessage(err: unknown): string {
     case 'EMPTY': return 'Gemini가 빈 응답을 보냈어요. 다시 시도해 주세요.'
     case 'MALFORMED': return '요청을 처리하는 중 문제가 생겼어요. 조금 더 구체적으로 다시 말씀해 주세요.'
     case 'ABORTED': return '응답이 중단되었어요.'
+    case 'PLAN_LIMIT': return e.message && e.message !== 'PLAN_LIMIT' ? e.message : '오늘 사용할 수 있는 AI 요청을 모두 사용했어요. 요금제를 업그레이드하면 더 많이 쓸 수 있어요.'
     case 'BAD_REQUEST': return `요청이 거부되었어요: ${e.message}`
     default: return `알 수 없는 오류가 발생했어요${err instanceof Error && err.message ? `: ${err.message}` : ''}.`
   }
@@ -139,6 +141,7 @@ function upstreamMessage(body: unknown): string {
 /** Turn an HTTP status + parsed body into a result or a typed error (pure). */
 export function interpretResponse(status: number, body: unknown): GenerateResult | GeminiError {
   const msg = upstreamMessage(body)
+  if (status === 402 || (body && typeof body === 'object' && (body as { error?: unknown }).error === 'PLAN_LIMIT')) return new GeminiError('PLAN_LIMIT', msg || 'PLAN_LIMIT', status)
   if (status === 503 && body && typeof body === 'object' && (body as { error?: unknown }).error === 'NO_KEY') return new GeminiError('NO_KEY', msg || 'NO_KEY', status)
   if (status === 429) return new GeminiError('RATE_LIMIT', msg || 'rate limited', status)
   if (status === 401 || status === 403 || (status === 400 && /api key/i.test(msg))) return new GeminiError('AUTH', msg || 'auth', status)

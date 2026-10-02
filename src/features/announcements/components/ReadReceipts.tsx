@@ -2,10 +2,11 @@ import { Eye } from 'lucide-react'
 import { Avatar, AvatarStack, Popover } from '@/components/ui'
 import { useCore } from '@/store/core'
 import { cn } from '@/lib/utils'
+import { isHuman } from '@/features/people/format'
 
 /** "읽음 9/14" with avatar stack; popover lists who has / hasn't read. */
 export function ReadReceipts({ readBy, className }: { readBy: string[]; className?: string }) {
-  const users = useCore((s) => s.users)
+  const users = useCore((s) => s.users).filter(isHuman)
   const read = users.filter((u) => readBy.includes(u.id))
   const unread = users.filter((u) => !readBy.includes(u.id))
   const pct = users.length ? Math.round((read.length / users.length) * 100) : 0

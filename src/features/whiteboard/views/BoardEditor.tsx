@@ -6,7 +6,7 @@ import { Avatar, Button, Kbd, Menu, Modal, Tooltip } from '@/components/ui'
 import { toast, useCore } from '@/store/core'
 import { cn, timeAgo, uid } from '@/lib/utils'
 import type { Board, WbElement } from '../types'
-import { useWhiteboard } from '../store'
+import { isBoardStarred, useWhiteboard } from '../store'
 import { useBoardEditor } from '../canvas/useBoardEditor'
 import { Canvas, type CanvasApi } from '../canvas/Canvas'
 import { Toolbar } from '../canvas/Toolbar'
@@ -14,6 +14,7 @@ import { StylePanel } from '../canvas/StylePanel'
 import { Collaborators, COLLAB_COLORS, type Collaborator } from '../canvas/Collaborators'
 import { RealCursors, useRemoteCursors } from '../canvas/RealCursors'
 import { isSyncLeader, useSyncStatus } from '@/lib/sync'
+import { isDemoWorkspace } from '@/lib/workspace'
 import { STICKY_COLORS } from '../canvas/geometry'
 import { exportBoardPng } from '../canvas/exportPng'
 import { ImageDialog } from '../components/ImageDialog'
@@ -59,7 +60,7 @@ export function BoardEditor({ board }: { board: Board }) {
   const serverMode = useSyncStatus((s) => s.mode === 'server')
   // Simulated teammates only liven up an otherwise empty board: never alongside real collaborators,
   // never as a member who is really online, and only on one client (the sync leader).
-  const simulate = remoteCursors.length === 0 && (!serverMode || isSyncLeader())
+  const simulate = isDemoWorkspace() && remoteCursors.length === 0 && (!serverMode || isSyncLeader())
   const collaborators = useMemo<Collaborator[]>(() => {
     if (!simulate) return []
     const notLive = (id: string) => id !== meId && !online.includes(id)
@@ -151,9 +152,9 @@ export function BoardEditor({ board }: { board: Board }) {
             className="col-start-1 row-start-1 w-full min-w-0 truncate rounded-md bg-transparent px-1.5 py-1 text-sm font-semibold text-fg outline-none transition hover:bg-line/[0.06] focus:bg-line/[0.08]"
           />
         </span>
-        <Tooltip content={live.starred ? '즐겨찾기 해제' : '즐겨찾기'} side="bottom">
+        <Tooltip content={isBoardStarred(live) ? '즐겨찾기 해제' : '즐겨찾기'} side="bottom">
           <button onClick={() => toggleStar(board.id)} className="rounded-md p-1 text-subtle transition hover:text-amber-500 dark:hover:text-amber-400">
-            <Star className={cn('h-4 w-4', live.starred && 'fill-amber-400 text-amber-500 dark:text-amber-400')} />
+            <Star className={cn('h-4 w-4', isBoardStarred(live) && 'fill-amber-400 text-amber-500 dark:text-amber-400')} />
           </button>
         </Tooltip>
         {showSaved && (

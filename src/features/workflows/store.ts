@@ -2,7 +2,11 @@ import { create } from 'zustand'
 import type { Edge } from '@xyflow/react'
 import { persisted, syncAcrossTabs } from '@/lib/persist'
 import { uid } from '@/lib/utils'
-import { getCurrentUserId } from '@/store/core'
+import { getCurrentUserId, useCore } from '@/store/core'
+import { isDemoWorkspace } from '@/lib/workspace'
+import { useMessenger } from '@/features/messenger/store'
+import { useProjects } from '@/features/projects/store'
+import { getDef } from './catalog'
 import { seedWorkflows } from './seed'
 import { BLANK_TEMPLATE, TEMPLATES } from './templates'
 import type { FlowNode, Workflow, WorkflowRun } from './types'
@@ -21,6 +25,34 @@ interface WorkflowsState {
   updateRun: (id: string, runId: string, patch: Partial<WorkflowRun>) => void
 }
 
+/**
+ * Templates are written for the demo company (channels like #engineering, demo people as assignees…).
+ * In a real workspace, point everything that doesn't exist here at something that does:
+ * unknown channel → #general, unknown person → the workflow owner, unknown project → the first project.
+ */
+function adaptToWorkspace(nodes: FlowNode[]): FlowNode[] {
+  if (isDemoWorkspace()) return nodes
+  const channels = useMessenger.getState().channels.filter((c) => c.kind !== 'dm' && !c.archived && c.name)
+  const userIds = new Set(useCore.getState().users.map((u) => u.id))
+  const projects = useProjects.getState().projects.filter((p) => !p.archived)
+  const hasChannel = (v: string) => channels.some((c) => c.name.toLowerCase() === v.replace(/^#/, '').toLowerCase() || c.id === v)
+  const hasProject = (v: string) => projects.some((p) => p.id === v || p.key.toLowerCase() === v.toLowerCase())
+  return nodes.map((n) => {
+    const fields = getDef(n.data.kind).fields
+    let config = n.data.config
+    for (const f of fields) {
+      const v = config[f.key]
+      if (typeof v !== 'string' || !v) continue
+      let next: string | undefined
+      if (f.type === 'channel' && !hasChannel(v)) next = channels.find((c) => c.id === 'c_general')?.name ?? channels[0]?.name ?? 'general'
+      else if (f.type === 'user' && v !== '$actor' && !userIds.has(v)) next = ''
+      else if (f.type === 'project' && v !== 'all' && !hasProject(v)) next = projects[0]?.id ?? ''
+      if (next !== undefined) config = { ...config, [f.key]: next }
+    }
+    return config === n.data.config ? n : { ...n, data: { ...n.data, config } }
+  })
+}
+
 /** Strip transient React Flow props (selected, measured, dragging…) before persisting. */
 function cleanNodes(nodes: FlowNode[]): FlowNode[] {
   return nodes.map(({ id, type, position, data }) => ({ id, type, position: { x: Math.round(position.x), y: Math.round(position.y) }, data }))
@@ -37,7 +69,9 @@ export const useWorkflows = create<WorkflowsState>()(
 
       createFromTemplate: (templateId) => {
         const tpl = TEMPLATES.find((t) => t.id === templateId) ?? BLANK_TEMPLATE
-        const { nodes, edges } = tpl.build()
+        const built = tpl.build()
+        const nodes = adaptToWorkspace(built.nodes)
+        const edges = built.edges
         const now = new Date().toISOString()
         const id = uid('wf')
         const existing = get().workflows.filter((w) => w.name.startsWith(tpl.name)).length

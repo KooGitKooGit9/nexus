@@ -46,7 +46,7 @@ export function ObjectiveDrawer({ id, onClose, onKrClick, onOpen }: { id: string
                 <div className="mt-3 flex items-center gap-2 text-xs text-muted">
                   <Avatar userId={o.ownerId} size="sm" showPresence />
                   <div>
-                    <div className="font-medium text-fg">{users.find((u) => u.id === o.ownerId)?.name}</div>
+                    <div className="font-medium text-fg">{users.find((u) => u.id === o.ownerId)?.name ?? '나간 멤버'}</div>
                     <div className="text-subtle">{users.find((u) => u.id === o.ownerId)?.title}</div>
                   </div>
                 </div>
@@ -107,7 +107,7 @@ export function ObjectiveDrawer({ id, onClose, onKrClick, onOpen }: { id: string
                     <span className="absolute -left-[25px] top-1 h-2.5 w-2.5 rounded-full bg-accent-gradient ring-4 ring-surface" />
                     <div className="flex items-center gap-2 text-xs">
                       <Avatar userId={h.userId} size="xs" />
-                      <span className="font-medium text-fg">{users.find((u) => u.id === h.userId)?.name}</span>
+                      <span className="font-medium text-fg">{users.find((u) => u.id === h.userId)?.name ?? '나간 멤버'}</span>
                       <span className="text-subtle" title={formatDate(h.at, 'yyyy.MM.dd HH:mm')}>{timeAgo(h.at)}</span>
                     </div>
                     <div className="mt-1 text-[13px] text-muted">

@@ -12,7 +12,7 @@ function Node({ userId, status, size, label, cancelled }: { userId: string; stat
   const user = useCore((s) => s.users.find((u) => u.id === userId))
   const badge = size === 'md' ? 'h-4 w-4 [&>svg]:h-2.5 [&>svg]:w-2.5' : 'h-3.5 w-3.5 [&>svg]:h-2 [&>svg]:w-2'
   return (
-    <Tooltip content={<span>{user?.name} · <span className="opacity-70">{label}</span></span>}>
+    <Tooltip content={<span>{user?.name ?? '나간 멤버'} · <span className="opacity-70">{label}</span></span>}>
       <div className="relative">
         {status === 'pending' && !cancelled && (
           <>

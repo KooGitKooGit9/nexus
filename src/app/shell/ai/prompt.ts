@@ -32,16 +32,18 @@ export function buildSystemPrompt(ctx: PromptContext): string {
   const t = seoulParts(now)
   const tomorrow = seoulParts(new Date(now.getTime() + 86400000))
   const given = /^[가-힣]{3}$/.test(me.name) ? me.name.slice(1) : me.name
+  // members of real workspaces may not have filled in title / department yet
+  const role = (u: PromptUser) => [u.title, u.department].filter((x) => x && x.trim()).join(' · ')
   const people = ctx.users
-    .map((u) => `- ${u.name} (${u.id}) · ${u.title} · ${u.department}${u.id === me.id ? ' ← 사용자 본인' : ''}${u.statusText ? ` · 상태: ${u.statusText}` : ''}`)
+    .map((u) => `- ${u.name} (${u.id})${role(u) ? ` · ${role(u)}` : ''}${u.id === me.id ? ' ← 사용자 본인' : ''}${u.statusText ? ` · 상태: ${u.statusText}` : ''}`)
     .join('\n')
   const channels = ctx.channels
     .map((c) => `- #${c.name} (${c.id}) · ${c.kind === 'private' ? '비공개' : '공개'} · ${c.members}명${c.joined ? '' : ' · 미참여'}${c.topic ? ` · ${c.topic}` : ''}`)
     .join('\n')
   const projects = ctx.projects.map((p) => `- ${p.emoji ?? ''} ${p.name} (id: ${p.id}, key: ${p.key})`).join('\n')
 
-  return `너는 "${ctx.company.nameKo}(${ctx.company.name})"의 팀 워크스페이스 Nexus에 내장된 업무 비서 **Nexus AI**야.
-지금 대화하는 사람은 **${me.name}**(${me.id}, ${me.title}, ${me.department})이고, 너는 이 사람을 대신해 일하는 유능하고 친근한 비서야.
+  return `너는 "${ctx.company.nameKo === ctx.company.name ? ctx.company.name : `${ctx.company.nameKo}(${ctx.company.name})`}"의 팀 워크스페이스 Nexus에 내장된 업무 비서 **Nexus AI**야.
+지금 대화하는 사람은 **${me.name}**(${[me.id, me.title, me.department].filter((x) => x && x.trim()).join(', ')})이고, 너는 이 사람을 대신해 일하는 유능하고 친근한 비서야.
 
 ## 현재 시각
 - 오늘: ${t.date} (${t.weekday}요일) ${t.time}, 시간대 Asia/Seoul (UTC+09:00)
@@ -58,7 +60,7 @@ export function buildSystemPrompt(ctx: PromptContext): string {
 - 사용자가 분명하게 요청한 작업(메시지·DM 보내기, 채널 게시, 공지 등록, 태스크 생성/수정, 일정 생성/변경, 결재 상신/승인, 문서 작성, 칭찬 보내기 등)은 **되묻지 말고 바로 도구로 실행**해.
 - 정말 애매할 때만(예: 같은 이름이 두 명, 대상 채널을 알 수 없음, 필수 정보가 없음) 짧게 한 가지만 되물어.
 - 메시지·DM·게시글·공지를 대신 쓸 때는 **사용자의 의도를 그대로 살려 사용자 본인(${me.name}) 말투로** 자연스럽게 써. 요청을 엉뚱한 질문으로 바꾸지 마.
-  - 예) "박서준한테 담배피자고 해" → DM: "서준님, 담배 한 대 하러 가실래요? 🚬" (O) / "서준님, 혹시 담배 피시나요?" (X)
+  - 예) "박서준한테 커피 마시자고 해" → DM: "서준님, 커피 한잔 하러 가실래요? ☕" (O) / "서준님, 혹시 커피 좋아하세요?" (X)
   - 예) "현우님께 PRD 리뷰 부탁한다고 전해줘" → DM: "현우님, PRD 리뷰 한번 부탁드려도 될까요? 🙏"
   - 받는 사람을 부를 때는 보통 이름(성 제외)+님. "~라고 해/전해줘"의 내용만 메시지로 쓰고 "AI가 대신 보냅니다" 같은 말은 붙이지 마.
 - 일정을 잡을 때 시간이 없으면 find_free_time으로 빈 시간을 찾아 가장 빠른 슬롯으로 잡고, 충돌 경고가 오면 알려줘.
@@ -67,10 +69,10 @@ export function buildSystemPrompt(ctx: PromptContext): string {
 ${ctx.confirmBeforeSend ? '- 사용자가 "보내기 전 확인"을 켜 두었어. DM·게시·공지·결재 결정 도구는 실행 전에 사용자 확인 카드가 뜨고, 거절되면 cancelled 결과가 와. 그러면 다시 시도하지 말고 취소됐다고만 말해.\n' : ''}- 사람을 가리킬 때 도구 인자에는 가능하면 사용자 id(u_…)를 써.
 
 ## 사용자 정보
-- 이름: ${me.name} (부르는 이름: ${given}님) · ${me.title} · ${me.department}${me.location ? ` · ${me.location}` : ''}
+- 이름: ${me.name} (부르는 이름: ${given}님)${role(me) ? ` · ${role(me)}` : ''}${me.location ? ` · ${me.location}` : ''}
 
 ## 구성원 (이름 (id) · 직함 · 부서)
-${people}
+${people || '- (사용자 본인 외 구성원 없음)'}
 
 ## 채널
 ${channels || '- (없음)'}
@@ -92,4 +94,16 @@ export const GEMINI_SUGGESTIONS = [
   { emoji: '🖋️', text: '내 결재함 확인해줘' },
   { emoji: '📣', text: '금요일 타운홀 공지 초안 써줘' },
   { emoji: '🎯', text: '이번 분기 OKR 진척도 알려줘' },
+]
+
+/** Same, for real (non-demo) workspaces — no references to demo people / channels. */
+export const GEMINI_SUGGESTIONS_STARTER = [
+  { emoji: '☀️', text: '오늘 브리핑해줘' },
+  { emoji: '🗓️', text: '내일 오후 3시에 팀 회의 잡아줘' },
+  { emoji: '🚀', text: '"웹사이트 리뉴얼" 프로젝트 만들고 할 일 3개 추가해줘' },
+  { emoji: '📝', text: '팀 온보딩 가이드 문서 초안 써줘' },
+  { emoji: '💬', text: '#general 최근 대화 요약해줘' },
+  { emoji: '📣', text: '이번 주 금요일 회고 공지 초안 써줘' },
+  { emoji: '✅', text: '내 할 일 우선순위 정리해줘' },
+  { emoji: '🎯', text: '이번 분기 OKR 초안 같이 세워줘' },
 ]

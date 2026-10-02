@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Clock, FolderSearch, FolderOpen, Search, Star, Trash2, Upload, Users } from 'lucide-react'
 import { Button, EmptyState } from '@/components/ui'
 import { useCore } from '@/store/core'
-import { useFiles } from './store'
+import { isFileStarred, useFiles } from './store'
 import { useDriveUI } from './uiStore'
 import { kindOf } from './fileTypes'
 import { uploadFiles, useItemActions } from './hooks'
@@ -84,7 +84,7 @@ export default function FilesPage() {
     if (q) list = (section === 'trash' ? files.filter((f) => f.trashed) : live).filter((f) => f.name.toLowerCase().includes(q))
     else if (section === 'shared') list = live.filter((f) => f.ownerId !== me && f.sharedWith?.includes(me))
     else if (section === 'recent') list = live.filter((f) => f.kind === 'file')
-    else if (section === 'starred') list = live.filter((f) => f.starred)
+    else if (section === 'starred') list = live.filter((f) => isFileStarred(f))
     else if (section === 'trash') list = files.filter((f) => f.trashed)
     else list = live.filter((f) => f.parentId === folderId)
 

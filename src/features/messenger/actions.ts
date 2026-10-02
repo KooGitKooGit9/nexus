@@ -2,6 +2,7 @@ import { daysFromNow, pick } from '@/lib/utils'
 import { getCurrentUserId, getUser, toast, useCore, useUI } from '@/store/core'
 import { notifyUser } from '@/lib/inbox'
 import { isUserOnline } from '@/lib/sync'
+import { isDemoWorkspace } from '@/lib/workspace'
 import { livePresence } from '@/components/ui/Avatar'
 import { useMessenger } from './store'
 import { channelLabel, channelPath, getChannel } from './lib'
@@ -49,7 +50,9 @@ export function startHuddle(channelId: string, video = false) {
     const u = users.find((x) => x.id === id)
     return !!u && livePresence(u) !== 'offline'
   }
-  const others = ch.memberIds.filter((id) => id !== me && id !== 'u_bot' && (isUserOnline(id) || present(id)))
+  // demo: simulated teammates who look present "join" on their own; real workspaces only ring people who are connected
+  const demo = isDemoWorkspace()
+  const others = ch.memberIds.filter((id) => id !== me && id !== 'u_bot' && (isUserOnline(id) || (demo && present(id))))
   const real = others.filter((id) => isUserOnline(id))
   const participants = [me, ...real, ...others.filter((id) => !real.includes(id)).slice(0, Math.max(0, 5 - real.length))]
   const title = `${channelLabel(ch)} ${video ? '화상 회의' : '허들'}`
@@ -183,7 +186,7 @@ export function runSlashCommand(raw: string, channelId: string, threadId?: strin
       }
       const mentioned = useCore.getState().users.find((u) => rest.includes(`@${u.name}`))
       const title = mentioned ? rest.replace(`@${mentioned.name}`, '').trim() : rest
-      const meta: TaskMeta = { title, done: false, assigneeId: mentioned?.id ?? me, due: daysFromNow(3, 18), key: `NX-${160 + Math.floor(Math.random() * 80)}` }
+      const meta: TaskMeta = { title, done: false, assigneeId: mentioned?.id ?? me, due: daysFromNow(3, 18), key: isDemoWorkspace() ? `NX-${160 + Math.floor(Math.random() * 80)}` : undefined }
       const taskMsg = post('태스크를 만들었습니다', { kind: 'task', meta: meta as unknown as Record<string, unknown> })
       toast('태스크가 생성되었습니다', { emoji: '✅', variant: 'success', description: title })
       if (mentioned && mentioned.id !== me && mentioned.id !== 'u_bot') {

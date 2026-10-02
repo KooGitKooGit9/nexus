@@ -40,6 +40,8 @@ interface MessengerState {
   /** messages queued for later sending */
   scheduled: Message[]
   lastChannelId: string
+  /** public channels the current member left on purpose (never auto-joined again) */
+  leftChannels: string[]
 
   sendMessage: (input: SendInput) => Message
   editMessage: (id: string, text: string) => void
@@ -77,7 +79,7 @@ interface MessengerState {
   unreadTotal: (userId: string) => number
 }
 
-type Data = Pick<MessengerState, 'channels' | 'messages' | 'starred' | 'bookmarks' | 'lastRead' | 'drafts' | 'collapsed' | 'recentEmoji' | 'scheduled' | 'lastChannelId'>
+type Data = Pick<MessengerState, 'channels' | 'messages' | 'starred' | 'bookmarks' | 'lastRead' | 'drafts' | 'collapsed' | 'recentEmoji' | 'scheduled' | 'lastChannelId' | 'leftChannels'>
 
 function seedData(): Data {
   return {
@@ -91,6 +93,7 @@ function seedData(): Data {
     recentEmoji: ['👍', '🙌', '🔥', '😂', '🎉', '👀', '🙏', '❤️'],
     scheduled: [],
     lastChannelId: 'c_general',
+    leftChannels: [],
   }
 }
 
@@ -246,6 +249,7 @@ export const useMessenger = create<MessengerState>()(
         set((s) => ({
           channels: s.channels.map((c) => (c.id === id ? { ...c, memberIds: [...c.memberIds, who] } : c)),
           lastRead: who === getCurrentUserId() ? { ...s.lastRead, [id]: new Date().toISOString() } : s.lastRead,
+          leftChannels: who === getCurrentUserId() ? (s.leftChannels ?? []).filter((x) => x !== id) : s.leftChannels,
         }))
         get().sendMessage({ channelId: id, userId: who, text: '채널에 참여했습니다.', kind: 'system', meta: { event: 'join' } })
       },
@@ -255,6 +259,7 @@ export const useMessenger = create<MessengerState>()(
         set((s) => ({
           channels: s.channels.map((c) => (c.id === id ? { ...c, memberIds: c.memberIds.filter((m) => m !== who) } : c)),
           starred: s.starred.filter((x) => x !== id),
+          leftChannels: who === getCurrentUserId() ? Array.from(new Set([...(s.leftChannels ?? []), id])) : s.leftChannels,
         }))
       },
       addMembers: (id, userIds) => {

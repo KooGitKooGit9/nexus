@@ -8,11 +8,14 @@ import { useCore, useCurrentUser, useUI } from '@/store/core'
 import { formatTime } from '@/lib/utils'
 import { friendlyName, greetingFor, mockWeather, useDailyBrief, useNow } from '../lib'
 import { Starfield } from './Starfield'
+import { useWorkspace } from '@/lib/workspace'
 
 export function Hero() {
   const me = useCurrentUser()
   const now = useNow(1000)
   const g = greetingFor(now)
+  // the weather chip is a demo prop (no weather service) — real workspaces don't show invented data
+  const demo = useWorkspace().kind === 'demo'
   const w = mockWeather(now)
   const brief = useDailyBrief()
   const reduce = useCore((s) => s.reduceMotion)
@@ -54,11 +57,11 @@ export function Hero() {
               <CalendarDays className="h-3.5 w-3.5" />
               {format(now, 'yyyy년 M월 d일 EEEE', { locale: ko })}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-line/10 bg-surface/50 px-3 py-1 text-xs font-medium text-muted backdrop-blur">
+            {demo && <span className="inline-flex items-center gap-1.5 rounded-full border border-line/10 bg-surface/50 px-3 py-1 text-xs font-medium text-muted backdrop-blur">
               <span className="text-sm leading-none">{w.emoji}</span>
               {w.city} <span className="font-semibold text-fg">{w.temp}°</span> {w.label}
               <span className="text-subtle">· 최고 {w.high}° 최저 {w.low}°</span>
-            </span>
+            </span>}
           </motion.div>
 
           <motion.h1
@@ -67,7 +70,7 @@ export function Hero() {
             transition={{ delay: 0.18, duration: 0.5 }}
             className="mt-5 font-display text-[28px] font-bold leading-tight tracking-tight text-fg break-keep sm:text-3xl md:text-[42px]"
           >
-            {g.text}, <span className="gradient-text">{friendlyName(me.name)}</span>{' '}
+            {g.text}{me?.name ? <>, <span className="gradient-text">{friendlyName(me.name)}</span></> : null}{' '}
             <motion.span className="inline-block origin-bottom" animate={{ rotate: [0, 14, -8, 14, 0] }} transition={{ delay: 0.8, duration: 1.4 }}>
               {g.emoji}
             </motion.span>
@@ -78,7 +81,7 @@ export function Hero() {
               <Sparkles className="h-3.5 w-3.5" />
             </span>
             <p className="text-[15px] leading-relaxed text-fg/85">
-              <span className="font-medium text-muted">AI 데일리 브리핑 · </span>
+              <span className="font-medium text-muted">오늘의 브리핑 · </span>
               {briefParts.map((p, i) => (
                 <span key={i}>{i > 0 && ', '}{p}</span>
               ))}

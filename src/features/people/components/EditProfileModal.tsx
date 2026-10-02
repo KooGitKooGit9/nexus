@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { X } from 'lucide-react'
 import { Button, Field, Input, Modal, Select, Textarea } from '@/components/ui'
 import { toast, useCore } from '@/store/core'
-import type { User } from '@/store/types'
+import type { Department, User } from '@/store/types'
+import { DEPARTMENTS, managerChain } from '../lib'
+import { isHuman } from '../format'
 
 const TIMEZONES = [
   { v: 'Asia/Seoul', l: '서울 (KST)' },
@@ -25,6 +27,10 @@ const STATUS_PRESETS = [
 
 export function EditProfileModal({ open, onClose, user }: { open: boolean; onClose: () => void; user: User }) {
   const updateUser = useCore((s) => s.updateUser)
+  const users = useCore((s) => s.users)
+  // possible managers: real people who don't (indirectly) report to this user — no cycles in the org chart
+  const managerOptions = users.filter((u) => isHuman(u) && u.id !== user.id && !managerChain(users, u.id).includes(user.id))
+  const [birthday, setBirthday] = useState(user.birthday ?? '')
   const [f, setF] = useState(user)
   const [skill, setSkill] = useState('')
   // Reset the form only when the modal opens — not on every store update of `user` (presence ticks, cross-tab sync)
@@ -32,7 +38,7 @@ export function EditProfileModal({ open, onClose, user }: { open: boolean; onClo
   const [wasOpen, setWasOpen] = useState(open)
   if (open !== wasOpen) {
     setWasOpen(open)
-    if (open) { setF(user); setSkill('') }
+    if (open) { setF(user); setSkill(''); setBirthday(user.birthday ?? '') }
   }
 
   const set = <K extends keyof User>(k: K, v: User[K]) => setF((p) => ({ ...p, [k]: v }))
@@ -43,13 +49,22 @@ export function EditProfileModal({ open, onClose, user }: { open: boolean; onClo
   }
 
   const save = () => {
+    const bday = birthday.trim().replace(/[./]/g, '-')
+    const bdayOk = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(bday)
+    if (bday && !bdayOk) {
+      toast('생일은 MM-DD 형식으로 입력해 주세요', { variant: 'warning', description: '예: 03-27' })
+      return
+    }
     updateUser(user.id, {
+      department: f.department,
+      managerId: f.managerId || null,
+      birthday: bdayOk ? bday : '',
       title: f.title.trim() || user.title,
       statusEmoji: f.statusEmoji || undefined,
       statusText: f.statusText?.trim() || undefined,
       phone: f.phone,
       location: f.location,
-      timezone: f.timezone,
+      timezone: f.timezone || 'Asia/Seoul',
       bio: f.bio?.trim() || undefined,
       skills: f.skills,
       nameEn: f.nameEn.trim() || user.nameEn,
@@ -93,8 +108,21 @@ export function EditProfileModal({ open, onClose, user }: { open: boolean; onClo
           <Field label="영문 이름"><Input value={f.nameEn} onChange={(e) => set('nameEn', e.target.value)} /></Field>
           <Field label="전화번호"><Input value={f.phone} onChange={(e) => set('phone', e.target.value)} /></Field>
           <Field label="근무지"><Input value={f.location} onChange={(e) => set('location', e.target.value)} /></Field>
-          <Field label="시간대" className="sm:col-span-2">
-            <Select value={f.timezone} onChange={(e) => set('timezone', e.target.value)}>
+          <Field label="부서">
+            <Select value={f.department ?? ''} onChange={(e) => set('department', e.target.value as Department)}>
+              <option value="">선택 안 함</option>
+              {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+            </Select>
+          </Field>
+          <Field label="매니저">
+            <Select value={f.managerId ?? ''} onChange={(e) => set('managerId', e.target.value || null)}>
+              <option value="">없음</option>
+              {managerOptions.map((u) => <option key={u.id} value={u.id}>{u.name}{u.title ? ` · ${u.title}` : ''}</option>)}
+            </Select>
+          </Field>
+          <Field label="생일 (MM-DD)"><Input value={birthday} onChange={(e) => setBirthday(e.target.value)} placeholder="예: 03-27" maxLength={5} /></Field>
+          <Field label="시간대">
+            <Select value={f.timezone || 'Asia/Seoul'} onChange={(e) => set('timezone', e.target.value)}>
               {TIMEZONES.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
             </Select>
           </Field>

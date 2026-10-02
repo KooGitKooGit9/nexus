@@ -6,6 +6,7 @@ import { TrendingDown, TrendingUp, Activity } from 'lucide-react'
 import { useProjects } from '@/features/projects/store'
 import { cn } from '@/lib/utils'
 import { Widget } from '../components/Widget'
+import { isDemoWorkspace } from '@/lib/workspace'
 
 const MOCK = [6, 9, 7, 11, 4, 2, 8, 10, 12, 9, 14, 5, 3, 11]
 
@@ -25,7 +26,7 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: { paylo
 export function ProductivityChart({ className, delay }: { className?: string; delay?: number }) {
   const tasks = useProjects((s) => s.tasks)
 
-  const { data, thisWeek, lastWeek, mock } = useMemo(() => {
+  const { data, thisWeek, lastWeek, mock, total } = useMemo(() => {
     const today = startOfDay(new Date())
     const days = Array.from({ length: 14 }, (_, i) => subDays(today, 13 - i))
     const counts = days.map((d) => {
@@ -34,12 +35,12 @@ export function ProductivityChart({ className, delay }: { className?: string; de
       return (tasks ?? []).filter((t) => t.completedAt && new Date(t.completedAt).getTime() >= s && new Date(t.completedAt).getTime() < e).length
     })
     const total = counts.reduce((a, b) => a + b, 0)
-    const mock = total < 3
+    const mock = total < 3 && isDemoWorkspace()
     const vals = mock ? MOCK : counts
     const data: Point[] = days.map((d, i) => ({ day: format(d, 'M/d'), label: format(d, 'M월 d일 (EEE)', { locale: ko }), count: vals[i] }))
     const thisWeek = vals.slice(7).reduce((a, b) => a + b, 0)
     const lastWeek = vals.slice(0, 7).reduce((a, b) => a + b, 0)
-    return { data, thisWeek, lastWeek, mock }
+    return { data, thisWeek, lastWeek, mock, total }
   }, [tasks])
 
   const change = lastWeek ? Math.round(((thisWeek - lastWeek) / lastWeek) * 100) : 0
@@ -63,7 +64,13 @@ export function ProductivityChart({ className, delay }: { className?: string; de
         </div>
       }
     >
-      <div className="h-[190px] -ml-3 -mr-1">
+      <div className="relative h-[190px] -ml-3 -mr-1">
+        {total === 0 && !mock && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 text-center">
+            <div className="text-[13px] font-medium text-fg/90">아직 완료된 태스크가 없어요</div>
+            <div className="text-xs text-subtle">태스크를 완료하면 팀의 흐름이 여기에 그려져요</div>
+          </div>
+        )}
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <defs>

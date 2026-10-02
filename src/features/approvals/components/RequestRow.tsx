@@ -49,7 +49,7 @@ export function RequestRow({ r, index, onOpen }: { r: ApprovalRequest; index: nu
         </div>
         <div className="mt-0.5 truncate text-[14.5px] font-semibold text-fg group-hover:text-fg">{r.title}</div>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-          <span className="flex items-center gap-1.5"><Avatar userId={r.requesterId} size="xs" />{requester?.name}<span className="text-subtle">· {requester?.department}</span></span>
+          <span className="flex items-center gap-1.5"><Avatar userId={r.requesterId} size="xs" />{requester?.name ?? '나간 멤버'}{requester?.department ? <span className="text-subtle">· {requester.department}</span> : null}</span>
           <span className="font-mono text-[11px] text-subtle">{r.docNo}</span>
           <span className="text-subtle">{timeAgo(r.createdAt)}</span>
           {!!r.attachments?.length && <span className="flex items-center gap-0.5 text-subtle"><Paperclip className="h-3 w-3" />{r.attachments.length}</span>}

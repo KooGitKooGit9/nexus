@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { useCore } from '@/store/core'
 import { usePeople, workedMs } from '../store'
 import { dateKey, pastDayHours, useNow } from '../lib'
+import { isDemoWorkspace } from '@/lib/workspace'
 
 const LIMIT = 52
 const STANDARD = 40
@@ -30,7 +31,8 @@ export function WeeklyHours() {
       else if (!future) {
         if (log[key] !== undefined) hours = log[key] / 60
         else if (clock.date === key) hours = workedMs(clock, Math.min(now.getTime(), addDays(d, 1).setHours(0, 0, 0, 0))) / 3600_000
-        else hours = pastDayHours(meId, d)
+        // demo only: plausible history for the seeded persona; real members only see what they actually clocked
+        else hours = isDemoWorkspace() ? pastDayHours(meId, d) : 0
       }
       return { key, label: format(d, 'EEE', { locale: ko }), date: format(d, 'M/d'), hours: Math.round(hours * 10) / 10, today, future }
     })

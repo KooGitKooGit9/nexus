@@ -9,8 +9,9 @@ import { useSyncStatus } from '@/lib/sync'
 import { Avatar, Kbd, Popover, Switch, Tooltip } from '@/components/ui'
 import { Markdown } from './ai/Markdown'
 import { useAIChat, activeConversation, selectMessages, geminiEnabled, canRegenerateMessage, setAINavigator, type ChatMessage, type Conversation } from './ai/store'
-import { SUGGESTIONS } from './ai/agent'
-import { GEMINI_SUGGESTIONS } from './ai/prompt'
+import { SUGGESTIONS, SUGGESTIONS_STARTER } from './ai/agent'
+import { GEMINI_SUGGESTIONS, GEMINI_SUGGESTIONS_STARTER } from './ai/prompt'
+import { isDemoWorkspace } from '@/lib/workspace'
 import { prettyModel } from './ai/gemini'
 import { ActionCard, ConfirmCard, ResultCard } from './ai/ActionCard'
 
@@ -121,7 +122,8 @@ function Panel({ onClose }: { onClose: () => void }) {
     setInput('')
   }
 
-  const suggestions = mode.on ? GEMINI_SUGGESTIONS : SUGGESTIONS
+  const demo = isDemoWorkspace()
+  const suggestions = mode.on ? (demo ? GEMINI_SUGGESTIONS : GEMINI_SUGGESTIONS_STARTER) : demo ? SUGGESTIONS : SUGGESTIONS_STARTER
   const showBanner = mode.checked && !mode.on && !bannerDismissed
 
   return (
@@ -169,7 +171,7 @@ function Panel({ onClose }: { onClose: () => void }) {
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="shrink-0 overflow-hidden">
             <div className="flex items-start gap-2 border-b border-warning/20 bg-warning/[0.08] px-4 py-2 text-[11.5px] leading-snug text-fg/80">
               <KeyRound className="mt-px h-3.5 w-3.5 shrink-0 text-warning" />
-              <span className="min-w-0 flex-1">Gemini API 키를 설정하면 진짜 AI로 동작합니다 · <code className="rounded bg-line/10 px-1 font-mono text-[10.5px]">server/.env</code></span>
+              <span className="min-w-0 flex-1">{demo ? <>Gemini API 키를 설정하면 진짜 AI로 동작합니다 · <code className="rounded bg-line/10 px-1 font-mono text-[10.5px]">server/.env</code></> : '지금은 AI 기본 모드로 동작하고 있어요. 일정·태스크 요약과 간단한 작업을 도와드릴게요.'}</span>
               <button onClick={() => useAIChat.getState().dismissBanner()} className="-m-1 rounded-md p-1 text-subtle transition hover:bg-line/10 hover:text-fg" aria-label="배너 닫기">
                 <X className="h-3 w-3" />
               </button>
@@ -231,7 +233,7 @@ function Panel({ onClose }: { onClose: () => void }) {
                 submit()
               }
             }}
-            placeholder={mode.on ? '무엇이든 말씀하세요… (예: 서준님께 점심 같이 하자고 DM)' : '무엇이든 물어보세요… (예: 오늘 브리핑)'}
+            placeholder={mode.on ? (demo ? '무엇이든 말씀하세요… (예: 서준님께 점심 같이 하자고 DM)' : '무엇이든 말씀하세요… (예: 내일 오후 3시에 팀 회의 잡아줘)') : '무엇이든 물어보세요… (예: 오늘 브리핑)'}
             className="max-h-[140px] min-h-[24px] flex-1 resize-none bg-transparent py-1.5 text-[13.5px] leading-6 text-fg outline-none placeholder:text-subtle"
           />
           {busy ? (
@@ -347,7 +349,7 @@ function SettingsMenu({ geminiOn }: { geminiOn: boolean }) {
       </div>
       <div className="my-1 h-px bg-line/10" />
       <div className="px-2.5 py-1.5 text-[11px] leading-snug text-subtle">
-        {geminiOn ? '요청한 작업은 바로 실행되고, 결과 카드에서 실행 취소할 수 있어요.' : '지금은 기본(규칙 기반) 모드예요. server/.env에 GEMINI_API_KEY를 넣으면 Gemini로 동작해요.'}
+        {geminiOn ? '요청한 작업은 바로 실행되고, 결과 카드에서 실행 취소할 수 있어요.' : isDemoWorkspace() ? '지금은 기본(규칙 기반) 모드예요. server/.env에 GEMINI_API_KEY를 넣으면 Gemini로 동작해요.' : '지금은 기본(규칙 기반) 모드예요. 요약과 간단한 작업을 도와드릴게요.'}
       </div>
     </Popover>
   )
@@ -548,7 +550,29 @@ function AssistantMessage({ m, onLink, onRegenerate, canRegenerate }: { m: ChatM
           </div>
         )}
 
-        {m.status === 'error' && (
+        {m.status === 'error' && m.errorCode === 'PLAN_LIMIT' && (
+          <div className="mt-2 rounded-2xl border border-accent/25 bg-accent/[0.07] px-3 py-2.5 text-[12.5px] leading-relaxed text-fg/85">
+            <div className="flex items-start gap-2">
+              <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
+              <div className="min-w-0 flex-1">
+                <div className="font-medium text-fg">AI 사용 한도에 도달했어요</div>
+                <div className="mt-0.5 text-muted">{m.error}</div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <button onClick={() => onLink('/settings/billing')} className="inline-flex items-center gap-1 rounded-lg bg-accent-gradient px-2.5 py-1 text-[11.5px] font-semibold text-white shadow-glow-sm transition hover:brightness-110">
+                    요금제 보기
+                  </button>
+                  {canRegenerate && (
+                    <button onClick={onRegenerate} className="inline-flex items-center gap-1 rounded-lg bg-line/[0.08] px-2 py-1 text-[11.5px] font-medium text-fg transition hover:bg-line/15">
+                      <RefreshCw className="h-3 w-3" />다시 시도
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {m.status === 'error' && m.errorCode !== 'PLAN_LIMIT' && (
           <div className="mt-2 flex items-start gap-2 rounded-2xl border border-danger/25 bg-danger/[0.07] px-3 py-2.5 text-[12.5px] leading-relaxed text-fg/85">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-danger" />
             <div className="min-w-0 flex-1">

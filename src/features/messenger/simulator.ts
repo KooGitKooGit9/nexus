@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { getCurrentUserId, getUser, notify, toast, useCore } from '@/store/core'
 import { pick } from '@/lib/utils'
 import { isSyncLeader, isUserOnline } from '@/lib/sync'
+import { isDemoWorkspace } from '@/lib/workspace'
 import { livePresence } from '@/components/ui/Avatar'
 import { useMessenger } from './store'
 import { getChannel, isDirect, useChatUI } from './lib'
@@ -9,6 +10,7 @@ import type { BotCard, Channel, Message } from './types'
 import { plan, typingMsFor, type Convo, type ReplyStep, type SimChannel, type SimUser, type Step } from './sim/engine'
 import { notifyRecipients } from './notifications'
 import { emitSimTyping, startRealtime } from './realtime'
+import { startAutoJoin } from './membership'
 import { personaAvailable, personaReply, type PersonaResult } from './persona'
 import { classify } from './sim/classify'
 import { CHANNEL_AMBIENT, DM_AMBIENT, DM_GENERIC, GENERIC_AMBIENT, MENTION_AMBIENT, type AmbientLine } from './sim/ambient'
@@ -45,6 +47,8 @@ function simChannel(ch: Channel, exclude: string[] = []): SimChannel {
  * person who is logged in right now — they answer for themselves.
  */
 export function canSimulate(id: string) {
+  // AI-simulated teammates exist only in demo workspaces — real workspaces contain only real people
+  if (!isDemoWorkspace()) return false
   return id !== getCurrentUserId() && id !== BOT && !isUserOnline(id)
 }
 function isAvailable(id: string) {
@@ -377,6 +381,7 @@ export function startSimulator() {
   if (started || typeof window === 'undefined') return
   started = true
   startRealtime()
+  startAutoJoin()
 
   // scheduled messages are per-user state: they're released by the scheduling user's own client
   setInterval(() => {
@@ -390,7 +395,7 @@ export function startSimulator() {
   // ambient teammate activity every ~50–100s — workspace-wide, so only on the sync leader (one browser)
   const loop = () => {
     setTimeout(async () => {
-      if (document.visibilityState === 'visible' && isSyncLeader()) {
+      if (document.visibilityState === 'visible' && isSyncLeader() && isDemoWorkspace()) {
         try {
           await ambientTick()
         } catch {

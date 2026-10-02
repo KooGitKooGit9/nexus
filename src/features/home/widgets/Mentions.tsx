@@ -32,7 +32,7 @@ export function Mentions({ className, delay }: { className?: string; delay?: num
   const channels = useMessenger((s) => s.channels)
   const me = useCore((s) => s.currentUserId)
   const users = useCore((s) => s.users)
-  const myName = users.find((u) => u.id === me)?.name ?? '김하늘'
+  const myName = users.find((u) => u.id === me)?.name ?? ''
   const handle = `@${myName}`
   // same source as the sidebar's 메신저 badge
   const unread = useMessenger((s) => s.unreadTotal(me))
@@ -44,7 +44,7 @@ export function Mentions({ className, delay }: { className?: string; delay?: num
           if (m.userId === me || m.deleted || m.scheduledFor) return false
           const c = channels?.find((x) => x.id === m.channelId)
           if (!c || (c.kind !== 'public' && !c.memberIds.includes(me))) return false
-          return m.text.includes(handle) || m.text.includes('@channel') || m.text.includes('@here')
+          return (!!myName && m.text.includes(handle)) || m.text.includes('@channel') || m.text.includes('@here')
         })
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
         .slice(0, 5),

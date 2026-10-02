@@ -3,6 +3,7 @@ import { persisted, syncAcrossTabs } from '@/lib/persist'
 import { uid } from '@/lib/utils'
 import { getCurrentUserId, getUser } from '@/store/core'
 import { getSessionUserId } from '@/lib/session'
+import { isDemoWorkspace } from '@/lib/workspace'
 import { notifyMembers } from '@/app/notifyMembers'
 import { formatRange } from './utils'
 import { buildSeedEvents } from './seed'
@@ -164,8 +165,11 @@ export const useCalendarPrefs = create<CalendarPrefs>()(
   persisted<CalendarPrefs>('calendar-prefs', (set) => ({
     view: 'week',
     hiddenTypes: [],
-    overlayUserIds: ['u_design'],
-    teamFocusIds: Array.from(new Set([getSessionUserId() ?? 'u_me', 'u_design', 'u_fe', 'u_pm'])),
+    // (not server-synced: per-browser view prefs) — demo personas only exist in demo workspaces
+    overlayUserIds: isDemoWorkspace() ? ['u_design'] : [],
+    teamFocusIds: isDemoWorkspace()
+      ? Array.from(new Set([getSessionUserId() ?? 'u_me', 'u_design', 'u_fe', 'u_pm']))
+      : [getSessionUserId()].filter((x): x is string => !!x),
     panelCollapsed: false,
     setPanelCollapsed: (panelCollapsed) => set({ panelCollapsed }),
     setView: (view) => set({ view }),

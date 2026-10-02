@@ -10,16 +10,19 @@ import { useMessenger } from '../store'
 import { slugify } from '../lib'
 import { EmojiPicker } from './EmojiPicker'
 import type { Channel } from '../types'
+import { isHuman, joinMeta } from '@/features/people/format'
 
 /* ───────────── User picker ───────────── */
 
 export function UserPicker({ selected, onChange, exclude = [], height = 'max-h-64' }: { selected: string[]; onChange: (ids: string[]) => void; exclude?: string[]; height?: string }) {
   const users = useCore((s) => s.users)
   const me = useCore((s) => s.currentUserId)
+  const navigate = useNavigate()
   const [q, setQ] = useState('')
   const list = users.filter(
-    (u) => u.id !== me && !exclude.includes(u.id) && (!q || u.name.includes(q) || u.nameEn.toLowerCase().includes(q.toLowerCase()) || u.title.includes(q) || u.department.includes(q)),
+    (u) => u.id !== me && isHuman(u) && !exclude.includes(u.id) && (!q || u.name.includes(q) || (u.nameEn ?? '').toLowerCase().includes(q.toLowerCase()) || (u.title ?? '').includes(q) || (u.department ?? '').includes(q) || (u.email ?? '').toLowerCase().includes(q.toLowerCase())),
   )
+  const nobodyElse = !users.some((u) => u.id !== me && isHuman(u) && !exclude.includes(u.id))
   const toggle = (id: string) => onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id])
   return (
     <div className="rounded-2xl border border-line/10 bg-surface-2/40">
@@ -29,7 +32,7 @@ export function UserPicker({ selected, onChange, exclude = [], height = 'max-h-6
           return (
             <motion.span key={id} layout initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex items-center gap-1.5 rounded-full bg-accent/15 py-0.5 pl-0.5 pr-1.5 text-[12px] font-medium text-accent">
               <Avatar userId={id} size="xs" />
-              {u?.name}
+              {u?.name ?? '나간 멤버'}
               <button onClick={() => toggle(id)} className="rounded-full p-0.5 hover:bg-accent/20"><X className="h-3 w-3" /></button>
             </motion.span>
           )
@@ -50,7 +53,7 @@ export function UserPicker({ selected, onChange, exclude = [], height = 'max-h-6
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[13.5px] font-medium">{u.name} {u.statusEmoji && <span className="text-[12px]">{u.statusEmoji}</span>}</div>
-                <div className="truncate text-[11.5px] text-subtle">{u.title} · {u.department}</div>
+                <div className="truncate text-[11.5px] text-subtle">{joinMeta(u.title, u.department) || u.email}</div>
               </div>
               <span className={cn('flex h-5 w-5 items-center justify-center rounded-full border transition', on ? 'border-transparent bg-accent-gradient text-white' : 'border-line/20')}>
                 {on && <Check className="h-3 w-3" />}
@@ -58,7 +61,17 @@ export function UserPicker({ selected, onChange, exclude = [], height = 'max-h-6
             </button>
           )
         })}
-        {!list.length && <div className="py-6 text-center text-[12.5px] text-subtle">검색 결과가 없어요</div>}
+        {!list.length && (nobodyElse ? (
+          <div className="flex flex-col items-center gap-2 py-6 text-center">
+            <div className="text-2xl">👋</div>
+            <div className="text-[12.5px] text-muted">{exclude.length > 1 ? '추가할 수 있는 멤버가 없어요' : '아직 워크스페이스에 다른 멤버가 없어요'}</div>
+            <button onClick={() => navigate('/settings/members')} className="inline-flex items-center gap-1 rounded-lg bg-accent/10 px-2.5 py-1 text-[12px] font-medium text-accent transition hover:bg-accent/20">
+              <UserPlus className="h-3.5 w-3.5" /> 동료 초대하기
+            </button>
+          </div>
+        ) : (
+          <div className="py-6 text-center text-[12.5px] text-subtle">검색 결과가 없어요</div>
+        ))}
       </div>
     </div>
   )
@@ -355,7 +368,7 @@ export function MembersModal({ channel, open, onClose, startAdding }: { channel:
                   <div className="text-[13.5px] font-medium">
                     {u.name} {u.id === me && <span className="text-subtle">(나)</span>} {u.statusEmoji}
                   </div>
-                  <div className="truncate text-[11.5px] text-subtle">{u.title} · {PRESENCE_LABEL[u.presence]}</div>
+                  <div className="truncate text-[11.5px] text-subtle">{joinMeta(u.title, PRESENCE_LABEL[u.presence])}</div>
                 </div>
                 {u.id === channel.createdBy && <Badge tone="accent">채널 관리자</Badge>}
               </div>

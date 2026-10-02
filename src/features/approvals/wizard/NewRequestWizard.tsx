@@ -13,6 +13,7 @@ import { emptyDraft, toInput, toPreview, validateForm, type Draft } from './draf
 import { StepType } from './StepType'
 import { StepForm } from './StepForm'
 import { StepLine } from './StepLine'
+import { isDemoWorkspace } from '@/lib/workspace'
 
 const STEPS = [
   { label: '종류 선택', icon: LayoutGrid },
@@ -67,7 +68,9 @@ const ymdPlus = (base: string, days: number) => {
 
 function defaultLine(users: { id: string; managerId: string | null }[], me: string, kind: ApprovalKind | null): string[] {
   const chain = managerChain(users, me, 2)
-  if (kind === 'access') return [...new Set([chain[0], 'u_cto'].filter(Boolean) as string[])].filter((x) => x !== me)
+  // demo: access requests also go to the CTO persona; real workspaces just follow the manager chain
+  const cto = isDemoWorkspace() && users.some((u) => u.id === 'u_cto') ? 'u_cto' : undefined
+  if (kind === 'access') return [...new Set([chain[0], cto].filter(Boolean) as string[])].filter((x) => x !== me)
   return chain.slice(0, kind === 'leave' ? 1 : 2)
 }
 

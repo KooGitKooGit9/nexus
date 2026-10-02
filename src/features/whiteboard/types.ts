@@ -45,7 +45,10 @@ export interface Board {
   memberIds: string[]
   createdAt: string
   updatedAt: string
+  /** legacy (demo seed): starred by the demo user — superseded by `starredBy` */
   starred?: boolean
+  /** members who starred this board (stars are personal) */
+  starredBy?: string[]
   template?: TemplateId
   elements: WbElement[]
   viewport?: Viewport

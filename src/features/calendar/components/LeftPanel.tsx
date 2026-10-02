@@ -10,6 +10,8 @@ import { involves, relativeStart } from '../utils'
 import { useNow } from '../hooks'
 import { MiniCalendar } from './MiniCalendar'
 import type { DisplayEvent } from '../types'
+import { isHuman } from '@/features/people/format'
+import { Link } from 'react-router-dom'
 
 interface Props {
   date: Date
@@ -86,7 +88,12 @@ export function LeftPanel({ date, onDate, events, range, onNew, onEventClick }: 
           {overlayUserIds.length > 0 && <span className="normal-case tracking-normal text-accent">{overlayUserIds.length}명 표시 중</span>}
         </h4>
         <div className="space-y-0.5">
-          {users.filter((u) => u.id !== me).map((u) => {
+          {!users.some((u) => u.id !== me && isHuman(u)) && (
+            <Link to="/settings/members" className="block rounded-lg px-2 py-1.5 text-[12px] text-subtle transition hover:bg-line/[0.06] hover:text-fg">
+              동료를 초대하면 팀원 일정을 겹쳐 볼 수 있어요 <span className="text-accent">초대하기 →</span>
+            </Link>
+          )}
+          {users.filter((u) => u.id !== me && isHuman(u)).map((u) => {
             const on = overlayUserIds.includes(u.id)
             const c = userColor(u.id)
             return (

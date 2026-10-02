@@ -10,6 +10,7 @@ import { getCurrentUserId, getUser, toast, useCore, useUI, type ActiveCall } fro
 import { Avatar, Tooltip } from '@/components/ui'
 import { closeStaleHuddles, endHuddle } from './actions'
 import { useMessengerSimulator } from './simulator'
+import { isDemoWorkspace } from '@/lib/workspace'
 import { callIdentity } from './call/session'
 import { disposeMesh, meshFor, releaseMesh, retainMesh, routeSignal, type RemotePeer } from './call/mesh'
 import { useSpeaking } from './call/media'
@@ -129,7 +130,9 @@ function CallWindow({ call, joinedRef, othersRef }: { call: ActiveCall; joinedRe
   const everyone = useMemo(() => Array.from(new Set([me, ...call.participantIds])).filter((id) => id !== 'u_bot'), [call.participantIds, me])
   // real people (logged in right now) connect over WebRTC; everyone else in the call is simulated
   const [realIds] = useState(() => everyone.filter((id) => id !== me && isUserOnline(id)))
-  const simIds = useMemo(() => everyone.filter((id) => id !== me && !realIds.includes(id)), [everyone, realIds])
+  // simulated tiles only in demo workspaces — in real workspaces offline members simply aren't in the call
+  const [demo] = useState(isDemoWorkspace)
+  const simIds = useMemo(() => (demo ? everyone.filter((id) => id !== me && !realIds.includes(id)) : []), [demo, everyone, realIds, me])
   const [simJoined, setSimJoined] = useState<string[]>(() => simIds.slice(0, 1))
 
   const spawn = (emoji: string, by: string) => {
@@ -158,6 +161,14 @@ function CallWindow({ call, joinedRef, othersRef }: { call: ActiveCall; joinedRe
         if (mesh.isClosed) return
         if (ident.joining) mesh.announce()
         else if (realIds.length) mesh.invite(realIds, { title: call.title, video: call.video, channelId: call.channelId, participantIds: everyone })
+        else if (!demo && everyone.length > 1) {
+          toast(call.channelId ? '지금 접속 중인 멤버가 없어요' : '상대방이 지금 오프라인이에요', {
+            emoji: '📵',
+            variant: 'info',
+            description: call.channelId ? '허들을 열어 두면 채널 멤버가 접속했을 때 참여할 수 있어요.' : '상대방이 접속하면 다시 걸어 보세요.',
+            duration: 6000,
+          })
+        }
       }, 30)
     }
     return () => releaseMesh(call.startedAt)
@@ -564,7 +575,7 @@ function TileFrame({
           <AudioBars active={speaking} compact={compact} />
         )}
         <span className={cn('truncate font-medium', compact ? 'text-[10px]' : 'text-[13px]')}>
-          {u?.name}
+          {u?.name ?? '나간 멤버'}
           {me && ' (나)'}
         </span>
       </div>

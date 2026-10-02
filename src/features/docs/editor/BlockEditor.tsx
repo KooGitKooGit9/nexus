@@ -79,7 +79,9 @@ export function BlockEditor({ initial, onChange, coEditors = [], onExitTop }: Pr
 
   /* ── simulated remote cursors ── */
   const [remoteAt, setRemoteAt] = useState<Record<string, string>>({})
-  const coKey = coEditors.map((c) => c.id).join(',')
+  // only the offline demo's simulated co-editors get (random) cursors — real members' positions aren't
+  // broadcast, so inventing a cursor for them would be misleading
+  const coKey = coEditors.filter((c) => !c.live).map((c) => c.id).join(',')
   useEffect(() => {
     if (!coKey) return
     const move = () => {

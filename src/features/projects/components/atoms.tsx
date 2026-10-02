@@ -5,6 +5,7 @@ import { useCore } from '@/store/core'
 import { cn, formatDate } from '@/lib/utils'
 import type { Priority, TaskStatus } from '../types'
 import { ALL_LABELS, PRIORITIES, PRIORITY_META, STATUSES, STATUS_META, dueLabel, hexA, ink, isOverdue, labelColor } from '../constants'
+import { isHuman } from '@/features/people/format'
 
 /* ───────────── Icons ───────────── */
 
@@ -146,6 +147,7 @@ export function AssigneePicker({ value, onChange, trigger, candidateIds, placeme
   const me = useCore((s) => s.currentUserId)
   const [q, setQ] = useState('')
   const pool = users
+    .filter(isHuman)
     .filter((u) => !candidateIds || candidateIds.includes(u.id) || value.includes(u.id))
     .filter((u) => !q || u.name.includes(q) || u.nameEn.toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => (a.id === me ? -1 : b.id === me ? 1 : 0))

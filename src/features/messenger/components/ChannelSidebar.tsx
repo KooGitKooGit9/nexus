@@ -2,16 +2,17 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  AtSign, Bookmark, ChevronRight, Compass, Hash, Headphones, Lock, MessageSquareText, PenLine, PhoneOff, Plus, Search, SquarePen, Star, X,
+  AtSign, Bookmark, ChevronRight, Compass, Hash, Headphones, Lock, MessageSquareText, PenLine, PhoneOff, Plus, Search, SquarePen, Star, UserPlus, X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCore, useUI } from '@/store/core'
 import { Avatar, CountBadge, Popover, PresenceDot, Tooltip } from '@/components/ui'
 import { useLiveUsers, useLivePresence } from '@/components/ui/Avatar'
-import { COMPANY } from '@/store/seed-users'
+import { useWorkspace } from '@/lib/workspace'
 import { useMessenger, isTimelineMessage, mentionsUser } from '../store'
 import { channelTitle, isDirect, otherMembers } from '../lib'
 import type { Channel } from '../types'
+import { isHuman } from '@/features/people/format'
 
 export type SidebarView = 'threads' | 'activity' | 'saved' | null
 
@@ -29,6 +30,7 @@ interface Unread {
 }
 
 export function ChannelSidebar({ activeId, activeView, onCreateChannel, onBrowse, onNewDM }: Props) {
+  const workspaceName = useWorkspace().name
   const me = useCore((s) => s.currentUserId)
   const users = useCore((s) => s.users)
   const liveUsers = useLiveUsers()
@@ -67,6 +69,8 @@ export function ChannelSidebar({ activeId, activeView, onCreateChannel, onBrowse
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, lastRead, mine, me, users])
 
+  // nobody else in the workspace yet → nudge to invite colleagues
+  const alone = !users.some((u) => u.id !== me && isHuman(u))
   const q = filter.trim().toLowerCase()
   const matches = (c: Channel) => !q || channelTitle(c, me).toLowerCase().includes(q)
 
@@ -96,7 +100,7 @@ export function ChannelSidebar({ activeId, activeView, onCreateChannel, onBrowse
       <div className="flex h-14 shrink-0 items-center gap-2 px-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 font-display text-[15px] font-bold tracking-tight">
-            {COMPANY.nameKo}
+            {workspaceName}
             <span className="h-1.5 w-1.5 rounded-full bg-success shadow-[0_0_8px_rgb(var(--success))]" />
           </div>
           <div className="text-[11px] text-subtle">{liveUsers.filter((u) => u.presence === 'online').length}명 온라인</div>
@@ -187,6 +191,12 @@ export function ChannelSidebar({ activeId, activeView, onCreateChannel, onBrowse
               <span className="flex h-5 w-5 items-center justify-center rounded-md bg-line/[0.07]"><Plus className="h-3 w-3" /></span>
               새 메시지
             </button>
+          )}
+          {!q && alone && (
+            <Link to="/settings/members" className="flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-[13px] text-accent transition hover:bg-accent/10">
+              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-accent/15"><UserPlus className="h-3 w-3" /></span>
+              동료 초대하기
+            </Link>
           )}
         </Section>
 

@@ -56,7 +56,7 @@ export function AnnouncementDetail({ id, onClose }: { id: string | null; onClose
               <div className="mt-3 flex items-center gap-2.5 text-sm">
                 <Avatar userId={a.authorId} size="sm" showPresence />
                 <div>
-                  <div className="font-medium text-fg">{author?.name} <span className="font-normal text-subtle">· {author?.title}</span></div>
+                  <div className="font-medium text-fg">{author?.name ?? '나간 멤버'}{author?.title ? <span className="font-normal text-subtle"> · {author.title}</span> : null}</div>
                   <div className="text-xs text-subtle">{formatDate(a.createdAt, 'yyyy년 M월 d일 a h:mm')} · {timeAgo(a.createdAt)}</div>
                 </div>
               </div>

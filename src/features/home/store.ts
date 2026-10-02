@@ -3,6 +3,7 @@ import { persisted, syncAcrossTabs } from '@/lib/persist'
 import { toast, useCore } from '@/store/core'
 import type { Presence } from '@/store/types'
 import { bigConfetti } from '@/features/goals/lib'
+import { isDemoWorkspace } from '@/lib/workspace'
 
 export type FocusMode = 'focus' | 'break'
 
@@ -28,6 +29,10 @@ interface HomeState {
   pauseFocus: () => void
   resetFocus: (mode?: FocusMode) => void
   completeFocus: () => FocusMode
+
+  /** "시작하기" checklist (real workspaces) hidden by this member */
+  onboardingDismissed: boolean
+  dismissOnboarding: () => void
 }
 
 const todayKey = (d = new Date()) =>
@@ -40,9 +45,13 @@ const myPresence = (): Presence => {
 
 export const useHome = create<HomeState>()(
   persisted<HomeState>('home', (set, get) => ({
-    note: '📝 오늘 꼭 할 것\n- 온보딩 개선안 리뷰\n- 런칭 회고 아젠다 정리\n- 지우님 PR 피드백',
+    // sample note only in the demo (real workspaces also get '' via STARTER_USER_STATE)
+    note: isDemoWorkspace() ? '📝 오늘 꼭 할 것\n- 온보딩 개선안 리뷰\n- 런칭 회고 아젠다 정리\n- 지우님 PR 피드백' : '',
     noteUpdatedAt: null,
     setNote: (note) => set({ note, noteUpdatedAt: new Date().toISOString() }),
+
+    onboardingDismissed: false,
+    dismissOnboarding: () => set({ onboardingDismissed: true }),
 
     focusMode: 'focus',
     focusRunning: false,

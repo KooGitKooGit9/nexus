@@ -74,7 +74,7 @@ export function AnnouncementCard({ a, onOpen, highlighted }: { a: Announcement; 
             <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-muted">{excerpt(a.body, 180)}</p>
             <div className="mt-3 flex items-center gap-2 text-xs text-muted">
               <Avatar userId={a.authorId} size="xs" />
-              <span className="font-medium text-fg/90">{author?.name}</span>
+              <span className="font-medium text-fg/90">{author?.name ?? '나간 멤버'}</span>
               <span className="text-subtle">{author?.title}</span>
               <span className="text-subtle">·</span>
               <span className="text-subtle" title={formatDate(a.createdAt, 'yyyy.MM.dd HH:mm')}>{timeAgo(a.createdAt)}</span>

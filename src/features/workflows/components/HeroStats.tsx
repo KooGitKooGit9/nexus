@@ -66,10 +66,16 @@ export function HeroStats() {
         <span className="ml-1 text-lg text-subtle">시간</span>
       </Stat>
       <Stat delay={0.18} icon={<CheckCircle2 />} label="성공률" glow="from-emerald-400 to-teal-600" caption={<>최근 4주 · {stats.recentCount}회 실행</>}>
-        <span className="gradient-text">
-          <CountUp value={stats.rate} decimals={1} />
-        </span>
-        <span className="ml-0.5 text-lg text-subtle">%</span>
+        {stats.recentCount ? (
+          <>
+            <span className="gradient-text">
+              <CountUp value={stats.rate} decimals={1} />
+            </span>
+            <span className="ml-0.5 text-lg text-subtle">%</span>
+          </>
+        ) : (
+          <span className="text-subtle">—</span>
+        )}
       </Stat>
     </div>
   )

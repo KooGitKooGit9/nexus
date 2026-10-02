@@ -1,5 +1,6 @@
 import { formatDate } from '@/lib/utils'
 import { COVERS } from './constants'
+import { currentWorkspace } from '@/lib/workspace'
 
 export interface DocTemplate {
   id: string
@@ -121,7 +122,7 @@ export const TEMPLATES: DocTemplate[] = [
     description: '신규 입사자가 첫 주를 순조롭게 보낼 수 있도록',
     cover: cover('lagoon'),
     tint: 'from-lime-400 to-teal-500',
-    content: () => `> [!👋] 오로라랩스에 오신 것을 환영합니다! 첫 2주 동안 이 가이드를 따라가 보세요.
+    content: () => `> [!👋] ${currentWorkspace().name}에 오신 것을 환영합니다! 첫 2주 동안 이 가이드를 따라가 보세요.
 
 ## 첫날
 - [ ] 노트북 수령 및 SSO 로그인

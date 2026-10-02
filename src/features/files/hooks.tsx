@@ -4,7 +4,7 @@ import { formatBytes, uid } from '@/lib/utils'
 import { getUser, toast } from '@/store/core'
 import { uploadFile, downloadUrl } from '@/lib/upload'
 import type { MenuItem } from '@/components/ui'
-import { descendantsOf, useFiles } from './store'
+import { descendantsOf, isFileStarred, useFiles } from './store'
 import { useDriveUI, type UploadJob } from './uiStore'
 import { KIND_META, baseName, kindOf } from './fileTypes'
 import type { FileItem } from './types'
@@ -42,6 +42,15 @@ async function readTextPreview(file: File): Promise<string | undefined> {
   } catch {
     return undefined
   }
+}
+
+let limitToastShown = false
+
+/** Upload rejected because the workspace plan's storage is full (server 402 PLAN_LIMIT). */
+export function isPlanLimitError(e: unknown): boolean {
+  if (!(e instanceof Error)) return false
+  const status = (e as Error & { status?: number }).status
+  return status === 402 || /PLAN_LIMIT|\(402\)|저장 공간|한도/.test(e.message)
 }
 
 /**
@@ -85,8 +94,18 @@ export function uploadFiles(list: FileList | File[], parentId: string | null) {
         setTimeout(() => useDriveUI.getState().removeUpload(job.id), 4500)
       })
       .catch((e: unknown) => {
-        useDriveUI.getState().updateUpload({ ...job, error: e instanceof Error ? e.message : '업로드 실패' })
-        toast('업로드에 실패했어요', { variant: 'error', description: file.name })
+        const message = e instanceof Error ? e.message : '업로드 실패'
+        useDriveUI.getState().updateUpload({ ...job, error: message })
+        if (isPlanLimitError(e)) {
+          // 402 PLAN_LIMIT (storage): say why, and where to fix it — once per batch
+          if (!limitToastShown) {
+            limitToastShown = true
+            setTimeout(() => { limitToastShown = false }, 3000)
+            toast('저장 공간이 부족해요', { variant: 'warning', emoji: '📦', description: `${message} 설정 → 요금제에서 용량을 늘릴 수 있어요.`, duration: 8000 })
+          }
+        } else {
+          toast('업로드에 실패했어요', { variant: 'error', description: `${file.name} · ${message}` })
+        }
         finish()
       })
   })
@@ -244,7 +263,7 @@ export function useItemActions() {
         { label: multi ? `${targets.length}개 항목 영구 삭제` : '영구 삭제', icon: <X />, danger: true, onClick: () => ui.setDeleteIds(targets.map((t) => t.id)) },
       ]
     }
-    const allStarred = targets.every((t) => t.starred)
+    const allStarred = targets.every((t) => isFileStarred(t))
     return [
       { label: '열기', icon: item.kind === 'folder' ? <FolderOpen /> : <Eye />, shortcut: '↵', disabled: multi, onClick: () => open(item) },
       { label: '이름 바꾸기', icon: <Pencil />, shortcut: 'F2', disabled: multi, onClick: () => ui.setRenamingId(item.id) },

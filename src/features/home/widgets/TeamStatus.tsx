@@ -8,6 +8,7 @@ import { useCalendar } from '@/features/calendar/store'
 import { useApprovals } from '@/features/approvals/store'
 import { eventsOn } from '../lib'
 import { Widget, WidgetLink } from '../components/Widget'
+import { isHuman } from '@/features/people/format'
 
 const ORDER: Record<Presence, number> = { online: 0, dnd: 1, away: 2, offline: 3 }
 
@@ -19,7 +20,8 @@ function parseDay(v: string) {
 
 export function TeamStatus({ className, delay }: { className?: string; delay?: number }) {
   const navigate = useNavigate()
-  const users = useLiveUsers()
+  const live = useLiveUsers()
+  const users = useMemo(() => live.filter(isHuman), [live])
   const me = useCore((s) => s.currentUserId)
   const events = useCalendar((s) => s.events)
   const requests = useApprovals((s) => s.requests)
@@ -74,6 +76,12 @@ export function TeamStatus({ className, delay }: { className?: string; delay?: n
           </Tooltip>
         ))}
       </div>
+      {team.length === 0 && (
+        <div className="rounded-xl border border-dashed border-line/15 px-3 py-3 text-center text-[12px] text-subtle">
+          아직 함께하는 동료가 없어요.{' '}
+          <button onClick={() => navigate('/settings/members')} className="font-medium text-accent hover:underline">동료 초대하기</button>
+        </div>
+      )}
       <ul className="mt-3 space-y-1.5">
         {team.filter((u) => u.statusText && u.presence !== 'offline').slice(0, 3).map((u) => (
           <li key={u.id} className="flex items-center gap-2 text-[12px]">
@@ -90,7 +98,7 @@ export function TeamStatus({ className, delay }: { className?: string; delay?: n
             {onLeave.map((id) => (
               <span key={id} className="flex items-center gap-1.5 rounded-full bg-line/[0.05] py-0.5 pl-0.5 pr-2 text-[11px] text-fg/90">
                 <Avatar userId={id} size="xs" />
-                {users.find((u) => u.id === id)?.name}
+                {users.find((u) => u.id === id)?.name ?? '나간 멤버'}
               </span>
             ))}
           </div>

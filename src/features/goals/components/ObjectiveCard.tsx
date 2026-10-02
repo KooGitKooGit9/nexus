@@ -32,7 +32,7 @@ export function KeyResultRow({ kr, onClick, compact }: { kr: KeyResult; onClick?
       className="group/kr w-full rounded-xl px-3 py-2.5 text-left transition hover:bg-line/[0.05] focus-ring"
     >
       <div className="flex items-center gap-2.5">
-        <Tooltip content={owner?.name}>
+        <Tooltip content={owner?.name ?? '나간 멤버'}>
           <Avatar userId={kr.ownerId} size="xs" />
         </Tooltip>
         <span className="min-w-0 flex-1 truncate text-[13px] text-fg/90 group-hover/kr:text-fg">{kr.title}</span>
@@ -97,7 +97,7 @@ export function ObjectiveCard({ objective: o, company, highlighted, onKrClick, o
             {o.description && company && <p className="mt-1 line-clamp-1 text-[13px] text-muted">{o.description}</p>}
             <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
               <Avatar userId={o.ownerId} size="xs" />
-              <span>{owner?.name}</span>
+              <span>{owner?.name ?? '나간 멤버'}</span>
               <span className="text-subtle">·</span>
               <span className="text-subtle">체크인 {checkins}회</span>
               {o.updatedAt && (
